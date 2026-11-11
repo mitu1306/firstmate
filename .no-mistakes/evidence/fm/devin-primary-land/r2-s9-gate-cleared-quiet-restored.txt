@@ -1,0 +1,19 @@
+=== 15:2x appended 'resolved [key=default]: ...' to labtask.status (task still in flight), ran bin/fm-afk-return.sh check -> 'catch-up clear', gate removed. Then a Devin turn end:
+❭ After-gate test: run no tools; reply AFTER-GATE and end your turn.
+ AFTER-GATE
+ ✓ Ran hook: bash '/tmp/fm-lab.ENiliQ/code/bin/fm-devin-primary.sh' stop (stop)
+ ✱ Did you know
+   hjkl /vim
+ ● /tmp/fm-lab.ENiliQ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Request to Reveal SessionStart Hook Con… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive                                                                                                                                                                             Context: 25k tokens
+--- daemon pid: 1446837 process: 1
+--- state/.afk mode: quiet
+--- daemon terminal record:
+tmux	fm-afk-daemon-547449985-1444975-11065-1794385438		%4	devin
+--- daemon log tail:
+[2026-11-11T15:18:03+0700] escalate: check: rearm-resurface -> check: rearm-resurface
+[2026-11-11T15:19:31+0700] daemon shutting down
+[2026-11-11T15:24:00+0700] daemon starting (pid 1446837); target=%4; target_source=FM_SUPERVISOR_TARGET; backend=tmux; backend_source=FM_SUPERVISOR_BACKEND; afk=on; inject_skip='heartbeat'; stale_escalate=240s; batch=90s

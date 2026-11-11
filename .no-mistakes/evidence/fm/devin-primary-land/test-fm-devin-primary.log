@@ -1,0 +1,15 @@
+ok - fm-devin-primary session-start: a foreign-held lock blocks the session
+ok - fm-devin-primary session-start: no addressable pane blocks the session
+ok - fm-devin-primary session-start: lock, quiet daemon, wedge warning, and context injection
+ok - fm-devin-primary session-start: any off directive warns that every wedge-alarm channel is off
+ok - fm-devin-primary session-start: an existing away record is reported as away
+ok - fm-devin-primary session-start: a live daemon for another pane is replaced and the away record survives
+ok - fm-devin-primary session-start: a live daemon launched for another primary harness is replaced
+ok - fm-devin-primary: the documented example config runs the wrapper and blocks the question dialog
+ok - fm-devin-primary stop: a successful self-heal allows the stop
+ok - fm-devin-primary stop: guard block passes through as JSON and the per-turn cap fails open
+ok - fm-devin-primary stop: a failed self-heal rides in the block reason
+ok - fm-devin-primary: a pending away-return gate blocks a busy stop toward its check, then the next stop restores quiet supervision
+ok - fm-devin-primary stop: silent when this session does not own the lock
+ok - fm-devin-primary session-end: inert when this session does not own the lock
+exit=0

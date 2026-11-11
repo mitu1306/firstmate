@@ -1,0 +1,15 @@
+⠀⣴⣾⣶⡄⠀⠀⠀⠀
+⠀⠛⠿⠟⠻⣶⣾⣶⡄  Devin CLI
+⠀⣤⣶⣦⣴⠿⢿⠿⠃  v3000.12.43
+⠀⠻⢿⠿⠃⠀⠀⠀⠀
+ Cognition Platform (Enterprise)
+ ✓ Hook block: bash '/tmp/fm-lab.ENiliQ/code/bin/fm-devin-primary.sh' session-start (session_start)
+❭ Reply with exactly the word PONG and nothing else. Do not run any tools.
+ ✱ Firstmate on Devin: this primary is not inside a tmux or Herdr pane the daemon can supervise (no TMUX_PANE, no Herdr pane id, no FM_SUPERVISOR_TARGET). Relaunch it as `devin --config <path-to-
+   primary-config.json>` from inside a tmux pane or Herdr tab in the firstmate home - see docs/configuration.md "Devin primary".
+ ● /tmp/fm-lab.ENiliQ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Reply with exactly the word PONG and no… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive                                                                                                                                                                                       hjkl /vim
+--- state dir after refused launch (no lock left behind):

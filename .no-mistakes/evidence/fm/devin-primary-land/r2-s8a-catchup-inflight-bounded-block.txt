@@ -1,0 +1,55 @@
+=== 15:19:33 ran bin/fm-afk-return.sh on the lab home (away mode, labtask in flight with an open blocked: event). It printed:
+  0 outcome(s) handled by the away session (0 routine, 0 escalated above)
+  (no routine outcomes recorded in the store for this window)
+Cost: 0 supervision outcome(s) recorded (0 routine, 0 captain); 1 task(s) live at return.
+fm-afk-return: catch-up must finish before the captain request
+catch-up health: supervision ran through the away window with no detected gap (watcher beat 4s old at return)
+catch-up wake: OPEN DECISIONS (still open, folded from the durable status logs - not just the latest line):
+catch-up wake: labtask [key=default] blocked: lab wake probe 2 - second approval required
+catch-up wake: OPEN DECISIONS: close one by answering it: bin/fm-send.sh <task> --resolve-key <key> '<answer>'
+catch-up wake: OPEN DECISIONS: <key> is the [key=...] printed before the verb; a token inside a note is prose, not a key.
+firstmate-actionable blocker: labtask [key=default] lab wake probe 2 - second approval required
+fm-afk-return: handle each blocker now, or close it with resolved [key=...] and append a durable reclassification reason, then run bin/fm-afk-return.sh check
+--- after return: daemon down, state/.afk gone, state/.afk-return-catchup present: 1
+
+=== Devin turn end while the gate is pending and 1 task is in flight:
+❭ Catch-up test: run no tools at all; reply CATCHUP-B and end your turn. If a Stop hook blocks you, quote its reason verbatim, still run no tools, and end your turn again.
+ CATCHUP-B
+ ✓ Hook block: bash '/tmp/fm-lab.ENiliQ/code/bin/fm-devin-primary.sh' stop (stop)
+ Captain, the Stop hook blocked the turn with this reason:
+   SUPERVISION IS PAUSED: the away return's catch-up gate (state/.afk-return-catchup) is still pending, so no daemon or watcher runs and no wake reaches this pane. Run bin/fm-afk-return.sh check and
+   work its blockers until the gate clears; ensure cannot start the daemon before then, and the next Stop after it clears restores quiet daemon supervision.
+   ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ●  TURN WOULD END BLIND - SUPERVISION IS OFF
+   ●  1 task(s) in flight, but no live watcher holds this home lock (last beat: 108s ago).
+   ●  the quiet daemon owns supervision on a Devin primary; run bin/fm-devin-primary.sh ensure to restart it, and tell the captain plainly if that fails; never run fm-watch.sh or fm-watch-arm.sh you
+   rself.
+   ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ✓ Hook block: bash '/tmp/fm-lab.ENiliQ/code/bin/fm-devin-primary.sh' stop (stop)
+ Captain, the Stop hook blocked the turn with this reason:
+   SUPERVISION IS PAUSED: the away return's catch-up gate (state/.afk-return-catchup) is still pending, so no daemon or watcher runs and no wake reaches this pane. Run bin/fm-afk-return.sh check and
+   work its blockers until the gate clears; ensure cannot start the daemon before then, and the next Stop after it clears restores quiet daemon supervision.
+   ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ●  TURN WOULD END BLIND - SUPERVISION IS OFF
+   ●  1 task(s) in flight, but no live watcher holds this home lock (last beat: 114s ago).
+   ●  the quiet daemon owns supervision on a Devin primary; run bin/fm-devin-primary.sh ensure to restart it, and tell the captain plainly if that fails; never run fm-watch.sh or fm-watch-arm.sh you
+   rself.
+   ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ✓ Hook block: bash '/tmp/fm-lab.ENiliQ/code/bin/fm-devin-primary.sh' stop (stop)
+ Captain, the Stop hook blocked the turn with this reason:
+   SUPERVISION IS PAUSED: the away return's catch-up gate (state/.afk-return-catchup) is still pending, so no daemon or watcher runs and no wake reaches this pane. Run bin/fm-afk-return.sh check and
+   work its blockers until the gate clears; ensure cannot start the daemon before then, and the next Stop after it clears restores quiet daemon supervision.
+   ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ●  TURN WOULD END BLIND - SUPERVISION IS OFF
+   ●  1 task(s) in flight, but no live watcher holds this home lock (last beat: 119s ago).
+   ●  the quiet daemon owns supervision on a Devin primary; run bin/fm-devin-primary.sh ensure to restart it, and tell the captain plainly if that fails; never run fm-watch.sh or fm-watch-arm.sh you
+   rself.
+   ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ● /tmp/fm-lab.ENiliQ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Request to Reveal SessionStart Hook Con… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive                                                                                                                                                                             Context: 25k tokens
+--- state/.turnend-blocks (count, prompt key):
+3
+740b6c6e-6e13-4984-9a5b-98c9668c8a5b

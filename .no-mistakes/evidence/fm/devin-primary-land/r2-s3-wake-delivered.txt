@@ -1,0 +1,25 @@
+=== Trigger: 15:05:08 wrote state/labtask.status = 'blocked: lab wake probe - captain approval required'
+=== Daemon log:
+[2026-11-11T15:03:40+0700] daemon starting (pid 483796); target=%0; target_source=FM_SUPERVISOR_TARGET; backend=tmux; backend_source=FM_SUPERVISOR_BACKEND; afk=on; inject_skip='heartbeat'; stale_escalate=240s; batch=90s
+[2026-11-11T15:05:50+0700] wake: signal: /tmp/fm-lab.ENiliQ/state/labtask.status
+[2026-11-11T15:05:52+0700] escalate: signal: /tmp/fm-lab.ENiliQ/state/labtask.status -> labtask.status: blocked: lab wake probe - captain approval required
+
+=== Devin primary pane after the batch window (wake typed + submitted by the daemon, handled by Devin):
+⠀⠻⢿⠿⠃⠀⠀⠀⠀
+ Cognition Platform (Enterprise)
+ ✓ Ran hook: bash '/tmp/fm-lab.ENiliQ/code/bin/fm-devin-primary.sh' session-start (session_start)
+❭ Without running any tool, quote verbatim the additional context your SessionStart hook injected at the start of this session, inside a code block. Then end your turn. Do not run fm-session-start.sh
+  yet.
+ Captain, the SessionStart hook injected:
+   Firstmate on Devin: lock acquired; quiet daemon running: pid 483796 supervising pane %0. WARNING: config/wedge-alarm names no working channel on this platform (auto is none off macOS); a wedged d
+   aemon escalation would only leave a marker file - see docs/wedge-alarm.md. Run bin/fm-session-start.sh now, once.
+❭ ⁣FIRSTMATE_OP: v1 away-supervisor: Supervisor escalate (1 event(s)): labtask.status: blocked: lab wake probe - captain approval required (pre-read; re-arm not needed — watcher daemon-managed)
+ ✓ Invoked skill afk
+ ✓ Invoked skill away-quiet-supervision
+ ✓ Read lines 1-160 in ./.agents/skills/afk/SKILL.md 154 lines (truncated)
+ Captain,  labtask  is blocked: the lab wake probe requires your approval. I have not approved it or re-armed the watcher; the daemon manages it.
+ ● /tmp/fm-lab.ENiliQ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Request to reveal SessionStart hook con… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive                                                                                                                                                                             Context: 30k tokens

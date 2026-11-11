@@ -1,0 +1,7 @@
+=== Clean /exit of Devin primary in pane %4 (daemon pid 1446837 before exit):
+--- lab tmux sessions left: 
+--- daemon 1446837 alive: no; daemon processes: 0
+--- state/.afk present: no; archived posture records: 1794384214-superseded-1794384854.afk-contract 1794384854.afk-contract 1794385437.afk-contract 
+--- daemon log tail:
+[2026-11-11T15:26:10+0700] escalate: signal: /tmp/fm-lab.ENiliQ/state/labtask.status -> labtask.status: blocked: lab wake probe 3 - after self-heal into pane %4
+[2026-11-11T15:28:31+0700] daemon shutting down

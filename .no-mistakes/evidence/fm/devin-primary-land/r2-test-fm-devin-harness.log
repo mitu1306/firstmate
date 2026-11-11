@@ -1,0 +1,9 @@
+ok - Devin native identity; anchored liveness
+ok - worker-only resolution and lifecycle capabilities
+ok - composer draft safety and independent delivery signals
+ok - Devin's 256-colour grey placeholder reads empty only in the devin scope
+ok - private config preserves user hooks; lifecycle and stale-generation rejection
+ok - worker config forces attribution off and Claude Code hook import off
+ok - keep-ai-trailers leaves Devin attribution on
+ok - scout launch carries Fusion, autonomy, typed brief and hooks; effort recorded only
+exit=0

@@ -1,0 +1,16 @@
+=== 15:12 killed the lab daemon's tmux session (old daemon pid 483796 dead), then asked Devin for a no-tool turn
+❭ Self-heal test: run no tools; reply HEAL-OK and end your turn.
+ HEAL-OK
+ ✓ Ran hook: bash '/tmp/fm-lab.ENiliQ/code/bin/fm-devin-primary.sh' stop (stop)
+ ● /tmp/fm-lab.ENiliQ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Request to reveal SessionStart hook con… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive                                                                                                                                                                             Context: 30k tokens
+--- new daemon lock pid: 923957 alive: yes
+--- daemon terminal record:
+tmux	fm-afk-daemon-547449985-920460-24054-1794384781		%0	devin
+--- daemon log tail:
+[2026-11-11T15:13:03+0700] daemon starting (pid 923957); target=%0; target_source=FM_SUPERVISOR_TARGET; backend=tmux; backend_source=FM_SUPERVISOR_BACKEND; afk=on; inject_skip='heartbeat'; stale_escalate=240s; batch=90s
+[2026-11-11T15:13:04+0700] wake: check: rearm-resurface
+[2026-11-11T15:13:07+0700] escalate: check: rearm-resurface -> check: rearm-resurface

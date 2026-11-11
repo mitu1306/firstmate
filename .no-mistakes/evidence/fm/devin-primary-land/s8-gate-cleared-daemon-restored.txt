@@ -1,0 +1,14 @@
+--- daemon log after gate clear:
+[2026-11-11T14:49:44+0700] daemon starting (pid 3898638); target=%3; target_source=FM_SUPERVISOR_TARGET; backend=tmux; backend_source=FM_SUPERVISOR_BACKEND; afk=on; inject_skip='heartbeat'; stale_escalate=240s; batch=90s
+[2026-11-11T14:49:45+0700] wake: check: rearm-resurface
+[2026-11-11T14:49:47+0700] escalate: check: rearm-resurface -> check: rearm-resurface
+[2026-11-11T14:50:21+0700] wake: signal: /tmp/fm-lab.hYyupJ/state/lab-task.status
+[2026-11-11T14:50:22+0700] self-handle: signal: /tmp/fm-lab.hYyupJ/state/lab-task.status -> routine signal: 
+   Use /clear to start a fresh conversation
+❭ Run no tools. Reply AFTER-GATE and end your turn.
+ AFTER-GATE
+ ● /tmp/fm-lab.hYyupJ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Request to quote SessionStart hook cont… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive · bypass                                                                                                                                                                    Context: 47k tokens

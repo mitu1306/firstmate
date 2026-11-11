@@ -1,0 +1,27 @@
+=== Devin primary A (pane %0) SIGKILLed ~15:15:23 with no SessionEnd; old daemon 923957 logging 'target %0 gone' and sitting in a foreground 30s sleep (4s elapsed); primary B launched in a new pane
+⠀⠻⢿⠿⠃⠀⠀⠀⠀
+ Cognition Platform (Enterprise)
+ ✓ Ran hook: bash '/tmp/fm-lab.ENiliQ/code/bin/fm-devin-primary.sh' session-start (session_start)
+❭ Without running any tool, quote verbatim the additional context your SessionStart hook injected, in a code block, then end your turn.
+ Captain, the SessionStart hook injected:
+   Firstmate on Devin: lock acquired; away daemon running: pid 1154766 supervising pane %4. WARNING: config/wedge-alarm names no working channel on this platform (auto is none off macOS); a wedged d
+   aemon escalation would only leave a marker file - see docs/wedge-alarm.md. Run bin/fm-session-start.sh now, once.
+ ● /tmp/fm-lab.ENiliQ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Request to Reveal SessionStart Hook Con… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive                                                                                                                                                                             Context: 24k tokens
+--- new pane id: %4
+--- old daemon 923957 alive: no
+--- new daemon pid: 1154766
+--- daemon terminal record:
+tmux	fm-afk-daemon-547449985-1152176-10263-1794385079		%4	devin
+--- state/.afk mode line: away
+--- away record entered_epoch before: entered_epoch: 1794384854 / after: entered_epoch: 1794384854; record has quiet mode line: 0
+--- archived records: 1794384214-superseded-1794384854.afk-contract
+--- daemon log tail:
+[2026-11-11T15:17:33+0700] warn: supervisor target '%0' gone; backing off 30s, will retry
+[2026-11-11T15:17:58+0700] daemon shutting down
+[2026-11-11T15:18:00+0700] daemon starting (pid 1154766); target=%4; target_source=FM_SUPERVISOR_TARGET; backend=tmux; backend_source=FM_SUPERVISOR_BACKEND; afk=on; inject_skip='heartbeat'; stale_escalate=240s; batch=90s
+[2026-11-11T15:18:01+0700] wake: check: rearm-resurface
+[2026-11-11T15:18:03+0700] escalate: check: rearm-resurface -> check: rearm-resurface

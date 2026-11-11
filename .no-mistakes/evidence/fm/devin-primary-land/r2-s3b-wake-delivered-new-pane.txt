@@ -1,0 +1,16 @@
+=== After restart for pane %4: appended 'blocked: lab wake probe 3' to labtask.status. Daemon log:
+[2026-11-11T15:26:08+0700] wake: signal: /tmp/fm-lab.ENiliQ/state/labtask.status
+[2026-11-11T15:26:10+0700] escalate: signal: /tmp/fm-lab.ENiliQ/state/labtask.status -> labtask.status: blocked: lab wake probe 3 - after self-heal into pane %4
+=== Pane %4:
+❭ ⁣FIRSTMATE_OP: v1 away-supervisor: Supervisor escalate (1 event(s)): labtask.status: blocked: lab wake probe 3 - after self-heal into pane %4 (pre-read; re-arm not needed — watcher daemon-managed)
+ ✓ Read ./.agents/skills/afk/SKILL.md 154 lines (truncated)
+ ✓ Read ./.agents/skills/away-quiet-supervision/SKILL.md 24 lines
+ ✓ Read lines 1-85 in ./bin/fm-session-start.sh 85 lines
+ ✓ Read ./.agents/skills/operational-home-layout/SKILL.md 101 lines (truncated)
+ ✓ Read lines 1-65 in ./bin/fm-crew-state.sh 65 lines
+ ● Running command
+ └ $ bin/fm-crew-state.sh labtask
+❭ Allow       ← ◼◼◼◼ → Once     Exec(bin/fm-crew-state.sh labtask)
+  Bypass mode
+  Deny
+↑↓ select · ←→ 1-4 scope · e edit · ↵ confirm · esc cancel

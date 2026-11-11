@@ -1,0 +1,29 @@
+⠀⣴⣾⣶⡄⠀⠀⠀⠀
+⠀⠛⠿⠟⠻⣶⣾⣶⡄  Devin CLI
+⠀⣤⣶⣦⣴⠿⢿⠿⠃  v3000.12.43
+⠀⠻⢿⠿⠃⠀⠀⠀⠀
+ Cognition Platform (Enterprise)
+ ✓ Ran hook: bash '/tmp/fm-lab.ENiliQ/code/bin/fm-devin-primary.sh' session-start (session_start)
+❭ Without running any tool, quote verbatim the additional context your SessionStart hook injected at the start of this session, inside a code block. Then end your turn. Do not run fm-session-start.sh
+  yet.
+ Captain, the SessionStart hook injected:
+   Firstmate on Devin: lock acquired; quiet daemon running: pid 483796 supervising pane %0. WARNING: config/wedge-alarm names no working channel on this platform (auto is none off macOS); a wedged d
+   aemon escalation would only leave a marker file - see docs/wedge-alarm.md. Run bin/fm-session-start.sh now, once.
+ ● /tmp/fm-lab.ENiliQ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Request to reveal SessionStart hook con… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive                                                                                                                                                                             Context: 24k tokens
+--- state/.afk-daemon-terminal (kind, session, wsid, captain pane, harness):
+tmux	fm-afk-daemon-547449985-481224-682-1794384215		%0	devin
+--- posture:
+version: 2
+entered: 2026-11-11T08:03:34Z
+entered_epoch: 1794384214
+expected_return: -
+reach_channels: none
+--- session lock owner:
+    PID COMMAND
+ 477935 /home/mitu/.local/share/devin/cli/_versions/3000.12.43/bin/devin --config /tmp/fm-lab.ENiliQ/devin-cfg/primary.json acp
+--- daemon log:
+[2026-11-11T15:03:40+0700] daemon starting (pid 483796); target=%0; target_source=FM_SUPERVISOR_TARGET; backend=tmux; backend_source=FM_SUPERVISOR_BACKEND; afk=on; inject_skip='heartbeat'; stale_escalate=240s; batch=90s

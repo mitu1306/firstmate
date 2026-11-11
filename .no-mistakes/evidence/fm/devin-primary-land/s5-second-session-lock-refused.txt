@@ -1,0 +1,16 @@
+⠀⣴⣾⣶⡄⠀⠀⠀⠀
+⠀⠛⠿⠟⠻⣶⣾⣶⡄  Devin CLI
+⠀⣤⣶⣦⣴⠿⢿⠿⠃  v3000.12.43
+⠀⠻⢿⠿⠃⠀⠀⠀⠀
+ Cognition Platform (Enterprise)
+ ✓ Hook block: bash '/tmp/fm-lab.hYyupJ/code/bin/fm-devin-primary.sh' session-start (session_start)
+❭ Reply with exactly PONG2 and run no tools.
+ ✱ Firstmate on Devin: this session could not take this home's session lock (error: another live firstmate session holds the lock (pid 3128810); operate read-only until resolved). If another firstmate
+   session owns this home, exit it first.
+ ● /tmp/fm-lab.hYyupJ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Reply with exactly PONG2 and run no too… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive · bypass                                                                                                                                           Press Ctrl+O to view the full thinking trace
+lock owner pid: 3128810
+after non-owner exit: daemon 3272997 alive=yes, .afk=quiet

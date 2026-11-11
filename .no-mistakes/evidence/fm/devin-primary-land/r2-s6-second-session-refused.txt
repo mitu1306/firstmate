@@ -1,0 +1,12 @@
+=== second Devin primary launched on the same home while primary %0 holds the lock:
+ Cognition Platform (Enterprise)
+ ✓ Hook block: bash '/tmp/fm-lab.ENiliQ/code/bin/fm-devin-primary.sh' session-start (session_start)
+❭ Reply with exactly the word PONG. Do not run any tools.
+ ✱ Firstmate on Devin: this session could not take this home's session lock (error: another live firstmate session holds the lock (pid 477935); operate read-only until resolved). If another firstmate
+   session owns this home, exit it first.
+ ● /tmp/fm-lab.ENiliQ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Reply with exactly the word PONG. Do no… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive                                                                                                                  Use Shift+Tab to cycle permission modes, and /plan and /ask to switch profiles
+--- daemon still supervising: %0, pid 923957

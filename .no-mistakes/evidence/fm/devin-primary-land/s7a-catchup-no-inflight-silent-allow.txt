@@ -1,0 +1,8 @@
+❭ Catch-up test A: run no tools; reply CATCHUP-A and end your turn.
+ CATCHUP-A
+ ● /tmp/fm-lab.hYyupJ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Request to quote SessionStart hook cont… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive · bypass                                                                                                                                                                    Context: 25k tokens
+daemon process after stop: none; state/.afk-return-catchup present: yes

@@ -1,0 +1,10 @@
+❭ Dialog test: call your ask_user_question tool right now to ask me whether to pick red or blue. Run no other tool. If the tool is refused, quote the refusal verbatim and end your turn.
+ ✓ Hook block: printf %s '{"decision":"block","reason":"Firstmate on Devin: never open a questi… (pre_tool)
+ ● Asked user Would you like to pick red or blue?
+ ✗ Tool rejected: Firstmate on Devin: never open a question dialog; ask in plain text and end the turn.
+   Tool rejected: Firstmate on Devin: never open a question dialog; ask in plain text and end the turn.
+ ● /tmp/fm-lab.ENiliQ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Request to Reveal SessionStart Hook Con… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive                                                                                                                                                                             Context: 26k tokens

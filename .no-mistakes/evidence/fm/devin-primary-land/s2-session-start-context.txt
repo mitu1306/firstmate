@@ -1,0 +1,22 @@
+⠀⣴⣾⣶⡄⠀⠀⠀⠀
+⠀⠛⠿⠟⠻⣶⣾⣶⡄  Devin CLI
+⠀⣤⣶⣦⣴⠿⢿⠿⠃  v3000.12.43
+⠀⠻⢿⠿⠃⠀⠀⠀⠀
+ Cognition Platform (Enterprise)
+ ✓ Ran hook: bash '/tmp/fm-lab.hYyupJ/code/bin/fm-devin-primary.sh' session-start (session_start)
+❭ Without running any tool, quote verbatim the additional context your SessionStart hook injected at the start of this session, inside a code block. Then end your turn. Do not run fm-session-start.sh
+  yet.
+   Firstmate on Devin: lock acquired; quiet daemon running: pid 3142483 supervising pane %0. WARNING: config/wedge-alarm names no working channel on this platform (auto is none off macOS); a wedged
+   daemon escalation would only leave a marker file - see docs/wedge-alarm.md. Run bin/fm-session-start.sh now, once.
+ ● /tmp/fm-lab.hYyupJ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Request to Reveal SessionStart Hook Con… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive · bypass                                                                                                                                                                    Context: 25k tokens
+--- state/.afk-daemon-terminal:
+tmux	fm-afk-daemon-2982837946-3135955-32331-1794382590		%0	devin
+--- daemon log:
+[2026-11-11T14:36:35+0700] daemon starting (pid 3142483); target=%0; target_source=FM_SUPERVISOR_TARGET; backend=tmux; backend_source=FM_SUPERVISOR_BACKEND; afk=on; inject_skip='heartbeat'; stale_escalate=240s; batch=90s
+--- lock owner:
+    PID COMMAND
+3128810 /home/mitu/.local/share/devin/cli/_versions/3000.12.43/bin/devin --config /tmp/fm-lab.hYyupJ/devin-cfg/primary.json acp

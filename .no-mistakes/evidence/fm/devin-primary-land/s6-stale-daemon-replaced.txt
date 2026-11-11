@@ -1,0 +1,24 @@
+primary A (pane %1) SIGKILLed at ~14:45:46 with no SessionEnd; old daemon 3660222 entered 30s target-gone backoff; primary B launched 14:45:56 in pane %3
+⠀⣴⣾⣶⡄⠀⠀⠀⠀
+⠀⠛⠿⠟⠻⣶⣾⣶⡄  Devin CLI
+⠀⣤⣶⣦⣴⠿⢿⠿⠃  v3000.12.43
+⠀⠻⢿⠿⠃⠀⠀⠀⠀
+ Cognition Platform (Enterprise)
+ ✓ Ran hook: bash '/tmp/fm-lab.hYyupJ/code/bin/fm-devin-primary.sh' session-start (session_start)
+❭ Without running any tool, quote verbatim the additional context your SessionStart hook injected, in a code block, then end your turn.
+   Firstmate on Devin: lock acquired; quiet daemon running: pid 3705131 supervising pane %3. WARNING: config/wedge-alarm names no working channel on this platform (auto is none off macOS); a wedged
+   daemon escalation would only leave a marker file - see docs/wedge-alarm.md. Run bin/fm-session-start.sh now, once.
+ ● /tmp/fm-lab.hYyupJ/code
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Request to quote SessionStart hook cont… ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive · bypass                                                                                                                                                                    Context: 25k tokens
+--- old daemon 3660222 alive: no
+--- daemon terminal record:
+tmux	fm-afk-daemon-2982837946-3701948-6394-1794383165		%3	devin
+--- posture: quiet
+--- daemon log tail:
+[2026-11-11T14:46:08+0700] wake: check: rearm-resurface
+[2026-11-11T14:46:10+0700] escalate: check: rearm-resurface -> check: rearm-resurface
+[2026-11-11T14:46:44+0700] wake: heartbeat
+[2026-11-11T14:46:45+0700] wake force-self (FM_INJECT_SKIP): heartbeat
