@@ -1,0 +1,19 @@
+== fresh lab primary; prompt asks Devin to call ask_user_question
+ ✓ Ran hook: bash '/tmp/fm-lab-code.SyP27k/firstmate/bin/fm-devin-primary.sh' session-start (session_start)
+❭ Test: call the ask_user_question tool once to ask me to pick red or blue. If the tool is blocked, just tell me what the block said.
+ ✓ Hook block: printf %s '{"decision":"block","reason":"Firstmate on Devin: never open a questi… (pre_tool)
+ ● Asked user Pick a color: red or blue?
+ ✗ Tool rejected: Firstmate on Devin: never open a question dialog; ask in plain text and end the turn.
+ ✓ bin/fm-session-start.sh
+ ✓ Invoked skill quiet
+ Captain, session start ran once and the digest is in - lock held, quiet daemon active, fleet empty, no queued wakes. Bootstrap notes two missing tools ( chrome-devtools-axi ,  quota-axi ) but nothing
+ blocking.
+ On the test: the  ask_user_question  tool is blocked by the Firstmate hook. The block said:
+ │ Firstmate on Devin: never open a question dialog; ask in plain text and end the turn.
+ That matches the Devin quiet-daemon contract - a held dialog would wedge the turn and the daemon's delivery with it.
+ So, in plain text: red or blue, captain?
+ ● /tmp/fm-lab-code.SyP27k/firstmate
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Test the ask_user_question tool with a … ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive · bypass                                                                                                                                                                    Context: 28k tokens

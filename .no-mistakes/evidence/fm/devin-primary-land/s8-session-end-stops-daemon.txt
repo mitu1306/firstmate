@@ -1,0 +1,10 @@
+== before /exit: daemon 2767171 alive=yes; state: .afk .supervise-daemon.lock 
+== after /exit in the owning primary
+daemon 2767171 alive=no
+lab tmux sessions:
+second
+state/.afk present? no
+daemon lock present? no
+daemon log tail:
+[2026-11-11T17:48:34+0700] wake force-self (FM_INJECT_SKIP): heartbeat
+[2026-11-11T17:49:07+0700] daemon shutting down

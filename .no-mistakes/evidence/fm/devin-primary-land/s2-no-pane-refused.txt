@@ -1,0 +1,4 @@
+$ (outside any tmux/Herdr pane) FM_HOME=$LAB devin --config $LAB/config/devin-primary.json -p -- "reply with the single word pong"
+Firstmate on Devin: this primary is not inside a tmux or Herdr pane the daemon can supervise (no TMUX_PANE, no Herdr pane id, no FM_SUPERVISOR_TARGET). Relaunch it as `devin --config <path-to-primary-config.json>` from inside a tmux pane or Herdr tab in the firstmate home - see docs/configuration.md "Devin primary".
+rc=0
+--- lab state after: lock=2760423 afk=no daemon-lock=no

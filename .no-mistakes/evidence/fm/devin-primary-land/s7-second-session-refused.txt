@@ -1,0 +1,16 @@
+== second devin --config ... launched against the same FM_HOME while primary (lock pid 2760423) runs
+ ✓ Hook block: bash '/tmp/fm-lab-code.SyP27k/firstmate/bin/fm-devin-primary.sh' session-start (session_start)
+❭ Reply with the single word hello.
+ ✱ Firstmate on Devin: this session could not take this home's session lock (error: another live firstmate session holds the lock (pid 2760423); operate read-only until resolved). If another firstmate
+   session owns this home, exit it first.
+❭ Reply with the single word world.
+ ✱ Firstmate on Devin: this session could not take this home's session lock (error: another live firstmate session holds the lock (pid 2760423); operate read-only until resolved). If another firstmate
+   session owns this home, exit it first.
+❭ /exit
+ devin -r gilded-tarantula
+ resumes this session · devin -r lists recent sessions
+DEVIN_EXITED rc=0
+
+== after the second Devin exited (its SessionEnd ran):
+lock: 2760423  daemon: 2767171 (was 2767171) alive=yes target=%3
+.afk

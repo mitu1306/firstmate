@@ -1,0 +1,28 @@
+== before relaunch (Devin SIGKILLed, no SessionEnd)
+stale daemon 2459341 record: tmux	fm-afk-daemon-1383234160-2457532-30344-1794391755		%0	devin
+(pane %0 no longer exists)
+
+== relaunch devin --config ... in new pane
+fm-afk-daemon-1383234160-2763833-23860-1794392168 %4 bash
+primary %3 devin
+⠀⣴⣾⣶⡄⠀⠀⠀⠀
+⠀⠛⠿⠟⠻⣶⣾⣶⡄  Devin CLI
+⠀⣤⣶⣦⣴⠿⢿⠿⠃  v3000.12.43
+⠀⠻⢿⠿⠃⠀⠀⠀⠀
+ Cognition Platform (Enterprise)
+ ✓ Ran hook: bash '/tmp/fm-lab-code.SyP27k/firstmate/bin/fm-devin-primary.sh' session-start (session_start)
+ ● /tmp/fm-lab-code.SyP27k/firstmate
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❭ Ask Devin to build features, fix bugs, or work on your code
+
+== after SessionStart
+daemon 2767171 record: tmux	fm-afk-daemon-1383234160-2763833-23860-1794392168		%3	devin
+old daemon 2459341 alive? no
+mode: quiet
+lock owner: 2760423 comm=devin
+
+== daemon log tail
+[2026-11-11T17:16:07+0700] daemon shutting down
+[2026-11-11T17:16:10+0700] daemon starting (pid 2767171); target=%3; target_source=FM_SUPERVISOR_TARGET; backend=tmux; backend_source=FM_SUPERVISOR_BACKEND; afk=on; inject_skip='heartbeat'; stale_escalate=240s; batch=90s
+[2026-11-11T17:16:11+0700] wake: check: rearm-resurface
+[2026-11-11T17:16:13+0700] escalate: check: rearm-resurface -> check: rearm-resurface

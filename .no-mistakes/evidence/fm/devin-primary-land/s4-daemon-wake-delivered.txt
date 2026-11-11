@@ -1,0 +1,42 @@
+== daemon log
+[2026-11-11T17:08:30+0700] daemon starting (pid 2411284); target=%0; target_source=FM_SUPERVISOR_TARGET; backend=tmux; backend_source=FM_SUPERVISOR_BACKEND; afk=on; inject_skip='heartbeat'; stale_escalate=240s; batch=90s
+[2026-11-11T17:08:56+0700] daemon shutting down
+[2026-11-11T17:09:17+0700] daemon starting (pid 2459341); target=%0; target_source=FM_SUPERVISOR_TARGET; backend=tmux; backend_source=FM_SUPERVISOR_BACKEND; afk=on; inject_skip='heartbeat'; stale_escalate=240s; batch=90s
+[2026-11-11T17:09:18+0700] wake: check: rearm-resurface
+[2026-11-11T17:09:19+0700] escalate: check: rearm-resurface -> check: rearm-resurface
+
+== escalation buffer after delivery:
+.subsuper-escalations
+
+== primary pane
+❭ Reply with the single word pong and do nothing else.
+ pong
+ ✓ Ran hook: bash '/tmp/fm-lab-code.SyP27k/firstmate/bin/fm-devin-primary.sh' stop (stop)
+❭ ⁣FIRSTMATE_OP: v1 away-supervisor: Supervisor escalate (1 event(s)): check: rearm-resurface (pre-read; re-arm not needed — watcher daemon-managed)
+ ✓ Invoked skill afk
+ ✓ Invoked skill away-quiet-supervision
+ ✓ bin/fm-session-start.sh
+ ✓ Invoked skill quiet
+ ✓ bin/fm-wake-drain.sh
+ ✓ Invoked skill bootstrap-diagnostics
+ ✓ Invoked skill session-start-recovery
+ ✓ Read lines 1-85 in ./.agents/skills/bootstrap-diagnostics/SKILL.md 79 lines
+ ✓ bin/fm-devin-primary.sh ensure
+ Captain, the wake queue is empty and quiet supervision is running.
+ Startup found two missing tools. May I install them?
+   •  chrome-devtools-axi  for browser work:  npm install -g chrome-devtools-axi && chrome-devtools-axi setup hooks
+   •  quota-axi  for quota-aware dispatch:  npm install -g quota-axi
+ Network checks are still pending.
+ ● /tmp/fm-lab-code.SyP27k/firstmate
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Request for a pong-only response ─
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive · bypass                                                                                                                                                                    Context: 33k tokens
+== after the wake turn
+daemon lock pid: 2459341
+2459341       02:36 bash /tmp/fm-lab-code.SyP27k/firstmate/bin/fm-supervise-daemon.sh
+terminal record: tmux	fm-afk-daemon-1383234160-2457532-30344-1794391755		%0	devin
+escalation buffer bytes: 0
+daemon log lines: 5
+[2026-11-11T17:09:18+0700] wake: check: rearm-resurface
+[2026-11-11T17:09:19+0700] escalate: check: rearm-resurface -> check: rearm-resurface

@@ -1,0 +1,47 @@
+== primary pane after launch (devin --config ... in tmux pane %0)
+ ✓ Trust /tmp/fm-lab-code.SyP27k/firstmate?
+⠀⣴⣾⣶⡄⠀⠀⠀⠀
+⠀⠛⠿⠟⠻⣶⣾⣶⡄  Devin CLI
+⠀⣤⣶⣦⣴⠿⢿⠿⠃  v3000.12.43
+⠀⠻⢿⠿⠃⠀⠀⠀⠀
+ Cognition Platform (Enterprise)
+ ✓ Ran hook: bash '/tmp/fm-lab-code.SyP27k/firstmate/bin/fm-devin-primary.sh' session-start (session_start)
+ ● /tmp/fm-lab-code.SyP27k/firstmate
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❭ Ask Devin to build features, fix bugs, or work on your code
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Adaptive · bypass                                                                                                                                                     See usage and cost: /session-stats
+
+== lab tmux panes
+fm-afk-daemon-1383234160-2404056-3371-1794391708 %1 bash pid=2411284
+primary %0 devin pid=2392944
+
+== state/.lock owner
+pid=2400894 comm=devin
+
+== state/.afk-contract
+version: 2
+entered: 2026-11-11T10:08:26Z
+entered_epoch: 1794391706
+expected_return: -
+reach_channels: none
+reach_announced: No phone channel is configured; anything that needs you waits for your return.
+spend_max_concurrent_workers: 4
+confirmed: 2026-11-11T10:08:26Z
+confirmed_epoch: 1794391706
+mode: quiet
+words: -
+
+== state/.afk-daemon-terminal (backend, session, ?, captain-pane, harness)
+tmux	fm-afk-daemon-1383234160-2404056-3371-1794391708		%0	devin
+
+== daemon lock pid
+2411284 bash /tmp/fm-lab-code.SyP27k/firstmate/bin/fm-supervise-daemon.sh
+
+== tester mistake: ensure run from OUTSIDE Devin (under the Claude test agent's process tree, no lab TMUX). It saw a harness mismatch and tore the daemon down. Not a captain path; this teardown is the setup for s3-stop-self-heal.txt
+fm-afk-launch: recorded terminal teardown is unconfirmed; preserving exact id
+fm-afk-launch: away mode stopped; terminal teardown or the record archive remains recorded for retry
+
+== supervise-daemon.log (tail)
+[2026-11-11T17:08:30+0700] daemon starting (pid 2411284); target=%0; target_source=FM_SUPERVISOR_TARGET; backend=tmux; backend_source=FM_SUPERVISOR_BACKEND; afk=on; inject_skip='heartbeat'; stale_escalate=240s; batch=90s
+[2026-11-11T17:08:56+0700] daemon shutting down
