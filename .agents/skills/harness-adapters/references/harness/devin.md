@@ -1,7 +1,7 @@
 # Devin CLI
 
 Verified on 2026-09-21 and 2026-09-22 with Devin CLI 3000.11.1 (cc4e349ca55e).
-The router owns the crewmate/scout boundary; a primary is supported only under the quiet daemon (see Primary integration), and a secondmate is unsupported.
+The router owns the crewmate/scout boundary; a primary or secondmate is supported only under the quiet daemon (see Primary integration).
 [Verification evidence](../../../../../docs/verification/devin.md) and its live guard refresh the vendor facts below.
 
 ## Operating facts
