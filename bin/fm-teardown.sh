@@ -202,11 +202,11 @@
 # secondmate retirement, every parent pending-reply record for that id (resolved
 # leftovers included) and its delivery confirmation is removed so retired mates
 # cannot leave durable reply expectations behind. Non-forced retirement refuses
-# while any of those records is still unresolved. On LOCAL secondmate
-# retirement, after the mate's runtime endpoint is killed and before its home
-# is removed, the home's own bin/fm-afk-launch.sh stop is run best-effort for
-# every harness so an away/quiet daemon still living in its detached terminal
-# is not leaked. Teardown then discards child
+# while any of those records is still unresolved. On LOCAL retirement of a
+# Devin secondmate (recorded harness family devin), after the mate's runtime
+# endpoint is killed and before its home is removed, the home's own
+# bin/fm-afk-launch.sh stop is run best-effort so the quiet daemon still living
+# in its detached terminal is not leaked. Teardown then discards child
 # work, kills child runtime endpoints, and removes the retired home. Removing a
 # leased home releases its durable treehouse lease so the pool slot is freed,
 # never left leased forever. If the treehouse return fails, teardown leaves the
@@ -4139,13 +4139,14 @@ if [ "$KIND" = secondmate ]; then
     || { echo "error: receiver wake cleanup could not be staged; preserving the secondmate home and route" >&2; exit 1; }
   pending_replies_recovery_validate recheck \
     || { echo "error: local pending-reply recovery paths changed; preserving the secondmate home and route" >&2; exit 1; }
-  # A secondmate home's away/quiet daemon lives in a detached tmux session or
-  # Herdr tab of its own: its pane-gone guard only backs off, and a Devin
-  # mate's SessionEnd may never fire when the endpoint is killed, so retiring
-  # the mate without stopping it would leak the daemon. Best-effort for every
-  # harness, only when the home's launcher and a daemon trace exist; the
-  # outcome is logged and never fails the teardown.
-  if [ -x "$HOME_PATH/bin/fm-afk-launch.sh" ] \
+  # A Devin secondmate home's quiet daemon lives in a detached tmux session or
+  # Herdr tab of its own: its pane-gone guard only backs off, and the mate's
+  # SessionEnd may never fire when the endpoint is killed, so retiring the mate
+  # without stopping it would leak the daemon. Devin secondmates only, and only
+  # when the home's launcher and a daemon trace exist; the outcome is logged
+  # and never fails the teardown.
+  if [ "$(fm_control_harness_family "$(meta_value "$META" harness)")" = devin ] \
+    && [ -x "$HOME_PATH/bin/fm-afk-launch.sh" ] \
     && { [ -e "$HOME_PATH/state/.afk-daemon-terminal" ] || [ -e "$HOME_PATH/state/.supervise-daemon.lock" ]; }; then
     if SM_DAEMON_STOP_OUT=$(env FM_ROOT_OVERRIDE= FM_STATE_OVERRIDE= FM_DATA_OVERRIDE= FM_PROJECTS_OVERRIDE= FM_CONFIG_OVERRIDE= FM_HOME="$HOME_PATH" \
         "$HOME_PATH/bin/fm-afk-launch.sh" stop 2>&1); then

@@ -2195,20 +2195,18 @@ test_forced_secondmate_dirty_child_return_warns_and_completes() {
   pass "a forced secondmate teardown warns about a dirty child return and still completes"
 }
 
-# A secondmate home's away/quiet daemon lives in a detached terminal whose
-# pane-gone guard only backs off, so local retirement runs the home's own
-# bin/fm-afk-launch.sh stop before removing the home - for every harness, and
-# only while the launcher and a daemon trace exist.
-test_secondmate_retirement_stops_the_home_daemon() {
-  local case_dir home rc
-  case_dir=$(make_case secondmate-daemon-stop)
+# Build a local secondmate case whose home has a stub bin/fm-afk-launch.sh
+# that logs how teardown invoked it, plus an away-daemon terminal trace. The
+# real stop mechanics are covered by the fm-afk-launch suites.
+# Args: case-name harness. Prints the case dir.
+make_secondmate_daemon_case() {
+  local name=$1 harness=$2 case_dir home
+  case_dir=$(make_case "$name")
   write_meta "$case_dir" local-only secondmate
   home="$case_dir/secondmate-home"
   mkdir -p "$home/bin" "$home/state" "$home/data" "$home/config" "$home/projects"
   printf '%s\n' task-x1 > "$home/.fm-secondmate-home"
-  printf '%s\n' "home=$home" >> "$case_dir/state/task-x1.meta"
-  # A stub launcher that logs how teardown invoked it; the real stop mechanics
-  # are covered by the fm-afk-launch suites.
+  printf '%s\n' "home=$home" "harness=$harness" >> "$case_dir/state/task-x1.meta"
   cat > "$home/bin/fm-afk-launch.sh" <<SH
 #!/usr/bin/env bash
 {
@@ -2219,13 +2217,24 @@ exit 0
 SH
   chmod +x "$home/bin/fm-afk-launch.sh"
   : > "$home/state/.afk-daemon-terminal"
+  printf '%s\n' "$case_dir"
+}
+
+# A Devin secondmate home's quiet daemon lives in a detached terminal whose
+# pane-gone guard only backs off, so local retirement of a Devin mate runs the
+# home's own bin/fm-afk-launch.sh stop before removing the home - only while
+# the launcher and a daemon trace exist. Other harnesses are left alone.
+test_secondmate_retirement_stops_the_home_daemon() {
+  local case_dir home rc harness
+  case_dir=$(make_secondmate_daemon_case secondmate-daemon-stop devin)
+  home="$case_dir/secondmate-home"
 
   rc=0
   run_teardown "$case_dir" --force > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
 
-  expect_code 0 "$rc" "secondmate-daemon-stop: forced secondmate teardown should succeed: $(cat "$case_dir/stderr")"
+  expect_code 0 "$rc" "secondmate-daemon-stop: forced Devin secondmate teardown should succeed: $(cat "$case_dir/stderr")"
   assert_grep 'argv=stop' "$case_dir/daemon-stop.log" \
-    "secondmate-daemon-stop: the home's fm-afk-launch.sh stop was not invoked"
+    "secondmate-daemon-stop: the Devin home's fm-afk-launch.sh stop was not invoked"
   assert_grep "FM_HOME=$home" "$case_dir/daemon-stop.log" \
     "secondmate-daemon-stop: the daemon stop did not pin FM_HOME to the retired home"
   grep -qx 'FM_ROOT_OVERRIDE=' "$case_dir/daemon-stop.log" \
@@ -2235,19 +2244,32 @@ SH
   assert_grep 'secondmate daemon stopped' "$case_dir/stderr" \
     "secondmate-daemon-stop: the daemon stop outcome was not logged"
 
-  # No launcher or no daemon trace: the stop is skipped, never a failure.
+  # A non-Devin mate with the same launcher and daemon trace is not stopped.
+  for harness in claude pi codex; do
+    case_dir=$(make_secondmate_daemon_case "secondmate-daemon-$harness" "$harness")
+    rc=0
+    run_teardown "$case_dir" --force > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
+    expect_code 0 "$rc" "secondmate-daemon-$harness: forced $harness secondmate teardown should succeed: $(cat "$case_dir/stderr")"
+    [ ! -e "$case_dir/daemon-stop.log" ] \
+      || fail "secondmate-daemon-$harness: teardown ran the home daemon stop for a $harness secondmate"
+    assert_no_grep 'secondmate daemon' "$case_dir/stderr" \
+      "secondmate-daemon-$harness: a daemon stop was logged for a $harness secondmate"
+  done
+
+  # A Devin mate with no launcher or no daemon trace: the stop is skipped,
+  # never a failure.
   case_dir=$(make_case secondmate-daemon-none)
   write_meta "$case_dir" local-only secondmate
   home="$case_dir/secondmate-home"
   mkdir -p "$home/state" "$home/data" "$home/config" "$home/projects"
   printf '%s\n' task-x1 > "$home/.fm-secondmate-home"
-  printf '%s\n' "home=$home" >> "$case_dir/state/task-x1.meta"
+  printf '%s\n' "home=$home" "harness=devin" >> "$case_dir/state/task-x1.meta"
   rc=0
   run_teardown "$case_dir" --force > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
   expect_code 0 "$rc" "secondmate-daemon-none: teardown without a daemon trace should succeed"
   assert_no_grep 'secondmate daemon' "$case_dir/stderr" \
     "secondmate-daemon-none: a daemon stop ran with no launcher and no trace"
-  pass "a local secondmate retirement stops the home's away/quiet daemon before removing the home"
+  pass "a local Devin secondmate retirement stops the home's quiet daemon; other harnesses are left alone"
 }
 
 test_return_that_removes_copy_warns_cannot_verify() {

@@ -1410,12 +1410,15 @@ Only the tmux and Herdr backends are supported; another backend is refused befor
 A secondmate home whose own `bin/fm-devin-primary.sh` still lacks `.fm-busy-stop` pointer support after the pre-launch sync is also refused and must be synced to current firstmate code first.
 
 Unlike the primary there is no captain-authored config: `fm-spawn.sh` generates one per launch at the parent's `state/<id>.devin-config.json` from the user's `~/.config/devin/config.json` through `bin/fm-devin-config.sh --secondmate`, which still forces `read_config_from.claude` and `attribution` to `false` and keeps the user's own hooks and settings.
-The generated hooks point at the secondmate home's own `bin/fm-devin-primary.sh`, including the busy-state `UserPromptSubmit` and `SessionEnd` hooks and the same `PreToolUse` `^ask_user_question$` block; the `Stop` hook carries no busy idle hook, and its verdict instead reaches the parent busy record through the home's `.fm-busy-stop` pointer, which `fm-spawn.sh` writes and git-excludes.
+The generated `SessionStart`, `Stop`, and `SessionEnd` hooks run the secondmate home's own `bin/fm-devin-primary.sh`, and the same `PreToolUse` `^ask_user_question$` block is added.
+The busy-state `UserPromptSubmit` hook and an extra `SessionEnd` hook run the parent's `bin/fm-busy-event.sh` against the parent's busy record.
+The `Stop` hook carries no busy idle hook; its verdict instead reaches the parent busy record through the home's `.fm-busy-stop` pointer, which `fm-spawn.sh` writes and git-excludes.
 
 The first prompt is the typed launch brief, and both it and the `SessionStart` `additionalContext` ask for `bin/fm-session-start.sh` once.
-The daemon's supervised pane is the secondmate's own pane, which parent steers through `fm-send` also type into, both gated by the composer-draft check.
+The daemon's supervised pane is the secondmate's own pane.
+The parent's `fm-send` steers type into that same pane, and both the daemon's wakes and those steers are gated by the composer-draft check.
 Lock refusal, `Stop` self-heal, and the bounded block cap are the same as the primary.
-A relaunch after a dead pane replaces the recorded daemon via `--replace-mismatched`, and teardown stops the home's daemon before removing the home.
+A relaunch after a dead pane replaces the recorded daemon via `--replace-mismatched`, and teardown of a Devin secondmate stops the home's daemon before removing the home.
 
 ### Choose the worker harness
 
