@@ -2195,6 +2195,61 @@ test_forced_secondmate_dirty_child_return_warns_and_completes() {
   pass "a forced secondmate teardown warns about a dirty child return and still completes"
 }
 
+# A secondmate home's away/quiet daemon lives in a detached terminal whose
+# pane-gone guard only backs off, so local retirement runs the home's own
+# bin/fm-afk-launch.sh stop before removing the home - for every harness, and
+# only while the launcher and a daemon trace exist.
+test_secondmate_retirement_stops_the_home_daemon() {
+  local case_dir home rc
+  case_dir=$(make_case secondmate-daemon-stop)
+  write_meta "$case_dir" local-only secondmate
+  home="$case_dir/secondmate-home"
+  mkdir -p "$home/bin" "$home/state" "$home/data" "$home/config" "$home/projects"
+  printf '%s\n' task-x1 > "$home/.fm-secondmate-home"
+  printf '%s\n' "home=$home" >> "$case_dir/state/task-x1.meta"
+  # A stub launcher that logs how teardown invoked it; the real stop mechanics
+  # are covered by the fm-afk-launch suites.
+  cat > "$home/bin/fm-afk-launch.sh" <<SH
+#!/usr/bin/env bash
+{
+  printf 'argv=%s\n' "\$*"
+  env | grep -E '^(FM_HOME|FM_ROOT_OVERRIDE|FM_STATE_OVERRIDE|FM_DATA_OVERRIDE|FM_PROJECTS_OVERRIDE|FM_CONFIG_OVERRIDE)=' | sort
+} > "$case_dir/daemon-stop.log"
+exit 0
+SH
+  chmod +x "$home/bin/fm-afk-launch.sh"
+  : > "$home/state/.afk-daemon-terminal"
+
+  rc=0
+  run_teardown "$case_dir" --force > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
+
+  expect_code 0 "$rc" "secondmate-daemon-stop: forced secondmate teardown should succeed: $(cat "$case_dir/stderr")"
+  assert_grep 'argv=stop' "$case_dir/daemon-stop.log" \
+    "secondmate-daemon-stop: the home's fm-afk-launch.sh stop was not invoked"
+  assert_grep "FM_HOME=$home" "$case_dir/daemon-stop.log" \
+    "secondmate-daemon-stop: the daemon stop did not pin FM_HOME to the retired home"
+  grep -qx 'FM_ROOT_OVERRIDE=' "$case_dir/daemon-stop.log" \
+    || fail "secondmate-daemon-stop: the daemon stop inherited a foreign FM_ROOT_OVERRIDE"
+  grep -qx 'FM_STATE_OVERRIDE=' "$case_dir/daemon-stop.log" \
+    || fail "secondmate-daemon-stop: the daemon stop inherited a foreign FM_STATE_OVERRIDE"
+  assert_grep 'secondmate daemon stopped' "$case_dir/stderr" \
+    "secondmate-daemon-stop: the daemon stop outcome was not logged"
+
+  # No launcher or no daemon trace: the stop is skipped, never a failure.
+  case_dir=$(make_case secondmate-daemon-none)
+  write_meta "$case_dir" local-only secondmate
+  home="$case_dir/secondmate-home"
+  mkdir -p "$home/state" "$home/data" "$home/config" "$home/projects"
+  printf '%s\n' task-x1 > "$home/.fm-secondmate-home"
+  printf '%s\n' "home=$home" >> "$case_dir/state/task-x1.meta"
+  rc=0
+  run_teardown "$case_dir" --force > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
+  expect_code 0 "$rc" "secondmate-daemon-none: teardown without a daemon trace should succeed"
+  assert_no_grep 'secondmate daemon' "$case_dir/stderr" \
+    "secondmate-daemon-none: a daemon stop ran with no launcher and no trace"
+  pass "a local secondmate retirement stops the home's away/quiet daemon before removing the home"
+}
+
 test_return_that_removes_copy_warns_cannot_verify() {
   local case_dir wt rc
   case_dir=$(make_case return-removes-copy)
@@ -6531,6 +6586,7 @@ test_dirty_return_warns_which_slot_was_lost
 test_dirty_return_warns_even_when_a_later_step_refuses
 test_forced_secondmate_child_scout_nested_clone_returns_clean
 test_forced_secondmate_dirty_child_return_warns_and_completes
+test_secondmate_retirement_stops_the_home_daemon
 test_return_that_removes_copy_warns_cannot_verify
 test_scout_ignored_files_survive_scratch_clean
 test_gh_error_and_content_absent_refuses

@@ -109,9 +109,11 @@ fm_control_harness_family() {  # <recorded-harness>
   esac
 }
 
-# Which task kinds an adapter is verified to run. muse, gemini, rovo, devin,
+# Which task kinds an adapter is verified to run. muse, gemini, rovo,
 # commandcode, polytoken, cortex, and kiro are crewmate/scout adapters only: none has a primary
-# supervision protocol, and bin/fm-spawn.sh refuses a --secondmate launch on any of them. The control
+# supervision protocol, and bin/fm-spawn.sh refuses a --secondmate launch on any of them.
+# devin runs a secondmate through the same quiet-daemon path as a Devin primary
+# (docs/configuration.md "Devin secondmate"). The control
 # plane asks this BEFORE it stops anything, so an incompatible relaunch target is
 # refused while the current agent is still running rather than after it has
 # been stopped.
@@ -120,7 +122,7 @@ fm_control_harness_supports_kind() {  # <harness> <kind>
   fm_control_harness_supported "$harness" || return 1
   case "$harness" in
     hermes) case "$kind" in ship|scout) ;; *) return 1 ;; esac ;;
-    muse|gemini|rovo|devin|commandcode|polytoken|cortex|kiro) [ "$kind" != secondmate ] || return 1 ;;
+    muse|gemini|rovo|commandcode|polytoken|cortex|kiro) [ "$kind" != secondmate ] || return 1 ;;
   esac
   return 0
 }
@@ -557,7 +559,12 @@ fm_control_harness_wiring_paths() {  # <harness> <worktree> <state-dir> <id> [ki
     # is written into the worktree, whose own .gemini/settings.json belongs to
     # the project, and nothing global is installed.
     gemini) printf '%s\n' "$state/$id.gemini-settings.json" ;;
-    devin) printf '%s\n' "$state/$id.devin-config.json" ;;
+    devin)
+      printf '%s\n' "$state/$id.devin-config.json"
+      # A secondmate's .fm-busy-stop pointer carries the same busy generation;
+      # a mate's home has no worktree-resident worker wiring to retire.
+      [ "$kind" != secondmate ] || printf '%s\n' "$wt/.fm-busy-stop"
+      ;;
     # Hermes reaches its private native managed overlay through launch env.
     hermes) printf '%s\n' "$state/$id.hermes-hooks/config.yaml" ;;
     # cortex's lifecycle hooks live in a firstmate-owned plugin directory the

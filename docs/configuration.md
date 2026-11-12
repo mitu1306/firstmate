@@ -1340,7 +1340,7 @@ An agy secondmate or primary runs the tracked project-scope `.agents/hooks.json`
 kiro (Kiro CLI, V2 engine only) is likewise verified for crewmate and scout launches ONLY, refused for a secondmate because it has no primary supervision protocol; it is claude-shaped, so its per-task turn-end and busy hooks live in a firstmate-owned agent config the spawn writes under `state/<id>.kiro-home` and reaches by relocating `KIRO_HOME` (never the worktree's own `.kiro/`), with the `--trust-all-tools` modal suppressed by a seeded `chat.disableTrustAllConfirmation` setting; [`docs/verification/kiro.md`](verification/kiro.md) owns that evidence, and the v3/KAS engine is out of scope and unsupported on Amazon Linux 2.
 A kiro hook command must be one unquoted token, so a kiro spawn refuses before launch when that per-task home path contains whitespace or a shell-special character (such as a quote or `$`) and asks for an `FM_HOME` or `FM_STATE_OVERRIDE` free of them.
 
-devin is verified for crewmate and scout launches, and as a primary only under the quiet daemon (see [Devin primary](#devin-primary)); a secondmate is still refused.
+devin is verified for crewmate and scout launches, and as a primary or secondmate only under the quiet daemon (see [Devin primary](#devin-primary) and [Devin secondmate](#devin-secondmate)).
 
 Its private worker config disables Claude Code imports (including the captain's hooks) and, unless the home sets `config/keep-ai-trailers` (see "Commit attribution"), Devin commit attribution without editing user or project config; [`fm-devin-config.sh`](../bin/fm-devin-config.sh) owns these enforced settings and [Devin verification](verification/devin.md) owns the live evidence and observed model availability.
 
@@ -1402,6 +1402,20 @@ It registers four hooks:
 `read_config_from.claude` is `false` so Devin does not import the repo's Claude Code hooks, which would run Claude's own supervision on a Devin session.
 `attribution` is `false` so Devin adds no `Co-Authored-By` trailer or `Generated with Devin` line to commits; drop it if the home keeps AI trailers (see [Commit attribution](#commit-attribution)).
 [`docs/supervision-protocols/devin.md`](supervision-protocols/devin.md) owns the primary's operating rules.
+
+### Devin secondmate
+
+A Devin secondmate runs the same quiet-daemon supervision as a Devin primary, inside the secondmate's own isolated home, launched by `bin/fm-spawn.sh <id> <parent-home> --harness devin --secondmate`.
+Only the tmux and Herdr backends are supported; another backend is refused before any provisioning, as is a raw launch command, because its hooks would never be installed.
+A secondmate home whose own `bin/fm-devin-primary.sh` still lacks `.fm-busy-stop` pointer support after the pre-launch sync is also refused and must be synced to current firstmate code first.
+
+Unlike the primary there is no captain-authored config: `fm-spawn.sh` generates one per launch at the parent's `state/<id>.devin-config.json` from the user's `~/.config/devin/config.json` through `bin/fm-devin-config.sh --secondmate`, which still forces `read_config_from.claude` and `attribution` to `false` and keeps the user's own hooks and settings.
+The generated hooks point at the secondmate home's own `bin/fm-devin-primary.sh`, including the busy-state `UserPromptSubmit` and `SessionEnd` hooks and the same `PreToolUse` `^ask_user_question$` block; the `Stop` hook carries no busy idle hook, and its verdict instead reaches the parent busy record through the home's `.fm-busy-stop` pointer, which `fm-spawn.sh` writes and git-excludes.
+
+The first prompt is the typed launch brief, and both it and the `SessionStart` `additionalContext` ask for `bin/fm-session-start.sh` once.
+The daemon's supervised pane is the secondmate's own pane, which parent steers through `fm-send` also type into, both gated by the composer-draft check.
+Lock refusal, `Stop` self-heal, and the bounded block cap are the same as the primary.
+A relaunch after a dead pane replaces the recorded daemon via `--replace-mismatched`, and teardown stops the home's daemon before removing the home.
 
 ### Choose the worker harness
 

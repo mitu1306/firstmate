@@ -600,7 +600,12 @@
 # a mate's completed turns stay in its own home. Codex stays unknown until a semantic
 # source exists. Grok keeps its rendered-tail fallback and is not given a parent
 # turn-end hook. Cursor's transcript binding is written for a secondmate the same way
-# as for a crewmate. Muse, gemini, devin, cortex, and rovo are refused as secondmates.
+# as for a crewmate. Muse, gemini, cortex, and rovo are refused as secondmates.
+# Devin runs a secondmate through the same quiet-daemon path as a Devin primary:
+# its generated config points the lifecycle hooks at the mate's own
+# bin/fm-devin-primary.sh, and the Stop verdict reaches the parent's busy record
+# through the .fm-busy-stop pointer in that home (docs/configuration.md "Devin
+# secondmate").
 # A raw launch command for a claude, pi, pi-signed, or omp secondmate is not armed
 # and retires any arm an earlier launch of that mate left, so its verdict is unknown:
 # the raw command carries no --settings or -e flag to load the wiring.
@@ -627,7 +632,7 @@
 # plus a gitignored .fm-grok-turnend worktree pointer and a state token.
 # muse installs no hook at all - its plugin engine is off in the default build - so
 # it writes state/<id>.muse-session to bind the pane to muse's own session event
-# log; muse, gemini, devin, commandcode, cortex, and kiro are crewmate/scout only and are refused for --secondmate.
+# log; muse, gemini, commandcode, cortex, and kiro are crewmate/scout only and are refused for --secondmate.
 # rovo installs no hook either - its eventHooks fire at tool granularity only,
 # never turn-end - so it carries no busy-source wiring at all and no turn-end
 # hook. A positional brief is dead-on-arrival (rovo loads, never works, and drops
@@ -691,7 +696,7 @@
 # past. bin/fm-polytoken-lib.sh owns every generated artifact and the verified
 # facts; .agents/skills/harness-adapters/references/harness/polytoken.md owns the
 # knowledge record. polytoken is crewmate/scout only and is refused for
-# --secondmate, like devin.
+# --secondmate, like muse.
 # Unless config/keep-ai-trailers is present, every claude launch carries the
 # attribution-off policy in its per-launch --settings JSON, so a spawned worker
 # never writes a Co-Authored-By trailer, Claude-Session link, or generated-with
@@ -3275,7 +3280,7 @@ if [ "$KIND" != secondmate ] && [ "$RELAUNCH" -eq 0 ] && [ -f "$CONFIG/crew-disp
   fi
 fi
 
-# muse, gemini, devin, commandcode, polytoken, cortex, and kiro are verified as CREWMATE/SCOUT adapters only. A secondmate is
+# muse, gemini, commandcode, polytoken, cortex, and kiro are verified as CREWMATE/SCOUT adapters only. A secondmate is
 # a firstmate instance, so it needs a primary supervision protocol.
 # gemini has none: docs/supervision-protocols/ carries no gemini wake protocol
 # and this task verified only crewmate-side launch, busy state, interrupt, and
@@ -3285,9 +3290,16 @@ fi
 # asyncRewake handlers that firstmate's primary turn-end supervision is built on
 # (muse 0.1.0-R708.1). Refusing here keeps that gap loud instead of standing up a
 # secondmate whose supervision cycle could never be armed.
-# devin runs a primary only from a captain-launched Devin config under the
-# quiet daemon (docs/configuration.md "Devin primary"); spawn writes no such
-# config, so a devin secondmate could never install its primary hooks.
+# devin runs the SAME quiet-daemon supervision a Devin primary does
+# (docs/configuration.md "Devin secondmate"): its generated secondmate config
+# carries this home's own bin/fm-devin-primary.sh hooks, which take the home's
+# session lock and arm its daemon, so a devin secondmate is allowed - but only
+# where that supervision path can exist. It is refused here, before any
+# provisioning, on a backend whose panes the daemon cannot supervise (tmux and
+# Herdr only), on a raw launch command (no hooks would be installed, so it
+# could never be supervised), and later on a secondmate home whose
+# bin/fm-devin-primary.sh predates .fm-busy-stop support (the Stop verdict
+# would never reach the parent's busy record).
 # commandcode has none either: only its worker busy mod is verified, and
 # docs/supervision-protocols/ carries no Command Code wake protocol (1.74.1).
 # polytoken has none either: only the crewmate/scout lifecycle is verified;
@@ -3298,8 +3310,14 @@ fi
 # interrupt, exit, and resume on the V2 engine, and docs/supervision-protocols/
 # carries no kiro wake protocol (kiro-cli 2.21.4).
 if [ "$KIND" = secondmate ] && [ "$HARNESS" = devin ]; then
-  echo "error: devin is a verified crewmate/scout adapter only and cannot run a secondmate; it runs a primary only through a captain-launched Devin config under the quiet daemon (docs/configuration.md \"Devin primary\"). Select a harness verified for secondmates." >&2
-  exit 1
+  if [ "$RAW_LAUNCH" -eq 1 ]; then
+    echo "error: a devin secondmate needs the canonical --harness devin launch; a raw launch command installs no hooks, so the mate could never be supervised" >&2
+    exit 1
+  fi
+  if [ "$BACKEND" != tmux ] && [ "$BACKEND" != herdr ]; then
+    echo "error: a devin secondmate's quiet daemon is verified only on tmux and Herdr panes; backend=$BACKEND cannot supervise it. Select backend tmux or herdr." >&2
+    exit 1
+  fi
 fi
 if [ "$KIND" = secondmate ] && { [ "$HARNESS" = muse ] || [ "$HARNESS" = gemini ] || [ "$HARNESS" = commandcode ] || [ "$HARNESS" = polytoken ] || [ "$HARNESS" = cortex ] || [ "$HARNESS" = kiro ] || [ "$HARNESS" = hermes ]; }; then
   echo "error: $HARNESS is a verified crewmate/scout adapter only and cannot run a secondmate; it has no primary supervision protocol. Select a harness verified for secondmates." >&2
@@ -4198,6 +4216,15 @@ if [ "$KIND" = secondmate ]; then
     esac
   else
     echo "warning: secondmate $ID sync skipped before launch: primary default-branch commit cannot be resolved" >&2
+  fi
+  # A devin secondmate's Stop verdict reaches the parent's busy record only
+  # through the .fm-busy-stop pointer this spawn writes and the home's own
+  # bin/fm-devin-primary.sh reads, so a home whose copy still predates that
+  # pointer support after the sync above would run unsupervised: refuse before
+  # any per-task state touches the home.
+  if [ "$HARNESS" = devin ] && ! grep -qF '.fm-busy-stop' "$PROJ_ABS/bin/fm-devin-primary.sh" 2>/dev/null; then
+    echo "error: secondmate home $PROJ_ABS still lacks Devin secondmate support after the pre-launch sync (its bin/fm-devin-primary.sh has no .fm-busy-stop support: the sync was skipped or the primary's default branch predates it); sync the home to current firstmate code first" >&2
+    exit 1
   fi
   mkdir -p "$PROJ_ABS/state" || {
     echo "error: could not create secondmate state directory for $PROJ_ABS" >&2
@@ -6588,7 +6615,23 @@ BUSY_GEN=
     ;;
   devin)
     if [ "$RAW_LAUNCH" -eq 0 ]; then
-      FM_KEEP_AI_TRAILERS="$KEEP_AI_TRAILERS" "$SCRIPT_DIR/fm-devin-config.sh" "$STATE_REAL" "$ID" "$BUSY_GEN" || exit 1
+      if [ "$KIND" = secondmate ]; then
+        # A secondmate's generated config points its lifecycle hooks at the
+        # mate's own bin/fm-devin-primary.sh and keeps only the busy
+        # UserPromptSubmit and SessionEnd writes; the Stop verdict reaches the
+        # parent's busy record through the .fm-busy-stop pointer below, the
+        # same contract the claude secondmate path writes.
+        FM_KEEP_AI_TRAILERS="$KEEP_AI_TRAILERS" "$SCRIPT_DIR/fm-devin-config.sh" --secondmate "$WT" "$STATE_REAL" "$ID" "$BUSY_GEN" || exit 1
+        {
+          printf 'writer=%s\n' "$FM_ROOT/bin/fm-busy-event.sh"
+          printf 'state=%s\n' "$STATE_REAL"
+          printf 'id=%s\n' "$ID"
+          printf 'gen=%s\n' "$BUSY_GEN"
+        } >"$WT/.fm-busy-stop"
+        exclude_path '.fm-busy-stop'
+      else
+        FM_KEEP_AI_TRAILERS="$KEEP_AI_TRAILERS" "$SCRIPT_DIR/fm-devin-config.sh" "$STATE_REAL" "$ID" "$BUSY_GEN" || exit 1
+      fi
     fi
     ;;
   commandcode)
