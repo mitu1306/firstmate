@@ -102,6 +102,34 @@ Stop stop_hook_active=true  last_assistant_message=pong session_id=four-polyeste
 `session_id` and `prompt_id` stayed identical across both blocked continuations, and `stop_hook_active` was true on every continuation.
 `bin/fm-turnend-guard.sh --devin` does not depend on `prompt_id` continuity: it keys its block cap on `session_id` and refills it only on a non-continuation stop with a new `prompt_id`.
 
+## Secondmate quiet-daemon lab
+
+Verified 2026-11-12 with `devin 3000.12.43` on a private tmux server, against a throwaway secondmate home carrying a valid `.fm-secondmate-home` marker.
+The config came from `bin/fm-devin-config.sh --secondmate`, the `.fm-busy-stop` pointer was the same shape `bin/fm-spawn.sh` writes, and Devin ran with the same launch flags and secondmate environment prefix (`FM_HOME` set to the mate's home, `NO_COLOR` cleared).
+The first block records that direct-hook run.
+
+```text
+first launch:   SessionStart hook ran; state/.lock taken; daemon terminal record "tmux <session> %0 devin"
+first turn:     parent busy record seq=3 state=idle source=devin-hook event=stop
+second Devin:   Hook block: "could not take this home's session lock (another live firstmate session holds the lock)"
+pane killed:    daemon still alive, record still names the gone pane %0
+relaunch:       old daemon gone, new daemon recorded for pane %3 (replace-mismatched)
+daemon killed:  next Stop hook restarted it; new daemon recorded for %3; parent record event=stop
+/quit:          SessionEnd stopped the daemon; parent record seq=10 state=idle event=session-end
+```
+
+A second run drove the real entrypoints in a lab parent home on a private tmux server: `bin/fm-home-seed.sh --no-projects`, `bin/fm-spawn.sh <id> --secondmate --harness devin`, a parent `bin/fm-send.sh` steer, and `bin/fm-teardown.sh <id>`.
+
+```text
+spawn:     generated state/<id>.devin-config.json with the secondmate hooks; .fm-busy-stop written and listed in the home's .git/info/exclude
+start:     SessionStart hook took the mate's lock; quiet daemon recorded the mate's own pane with harness devin; the mate ran bin/fm-session-start.sh once
+steer:     the inbox doorbell landed in the mate pane; the mate acknowledged the message and posted a correlated status line; parent busy record busy then idle (event=stop)
+teardown:  refused first on the unresolved routed reply; after the parent's pending-reply tick resolved it from the status line, teardown exited 0,
+           "away mode stopped; daemon terminal torn down", daemon process gone, home removed
+```
+
+The bounded block cap was not driven live, because it needs in-flight work plus a daemon that cannot restart; `tests/fm-devin-primary.test.sh` and `tests/fm-turnend-guard.test.sh` cover it on the shared `stop` path.
+
 ## Worker config imports and attribution
 
 With the pre-fix per-task config, a project `.claude/settings.json` logger fired on `SessionStart`, `UserPromptSubmit`, and `Stop`, and the user's own Claude Code `SessionStart` hooks also ran.

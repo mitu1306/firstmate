@@ -1,10 +1,18 @@
 #!/usr/bin/env bash
-# fm-devin-primary.sh - the single owner of a Devin primary's hook mechanics:
-# the quiet-daemon ensure, and the SessionStart / Stop / SessionEnd hook
-# entrypoints a Devin primary registers in its own Devin config. The config
-# shape and launch command are documented in docs/configuration.md "Devin
-# primary", with a copyable placeholder config in
+# fm-devin-primary.sh - the single owner of a Devin firstmate session's hook
+# mechanics: the quiet-daemon ensure, and the SessionStart / Stop / SessionEnd
+# hook entrypoints a Devin primary registers in its own Devin config. The same
+# hooks serve a Devin secondmate, whose config fm-spawn generates through
+# fm-devin-config.sh --secondmate with the hook commands pointing at this
+# script inside the mate's own home. The config shape and launch command are
+# documented in docs/configuration.md "Devin primary" and "Devin secondmate",
+# with a copyable placeholder config in
 # docs/examples/devin-primary-config.json.
+# A secondmate home carries .fm-busy-stop (bin/fm-spawn.sh writes it), a
+# key=value pointer (writer=, state=, id=, gen=) into the PARENT home's busy
+# record; `stop` below records its verdict there so the parent's active-turn
+# gate sees the mate's turn end even though Devin Stop hooks run no busy idle
+# write of their own.
 #
 # A Devin primary is ALWAYS daemon-supervised: Devin cannot be woken from
 # inside the model, so the quiet-mode daemon (bin/fm-supervise-daemon.sh,
@@ -116,6 +124,7 @@ EOF
 # the same way per the vendor hook contract.
 emit_block() {  # <reason>
   local reason=$1
+  FM_DEVIN_STOP_BLOCKED=1
   if command -v jq >/dev/null 2>&1; then
     jq -cn --arg r "$reason" '{decision:"block",reason:$r}'
     exit 0
@@ -196,7 +205,11 @@ cmd_session_start() {
 
   # The pane check comes first so a refused launch never leaves a lock behind.
   if ! supervisor_pane_addressable; then
-    emit_block "Firstmate on Devin: this primary is not inside a tmux or Herdr pane the daemon can supervise (no TMUX_PANE, no Herdr pane id, no FM_SUPERVISOR_TARGET). Relaunch it as \`env -u NO_COLOR devin --config <path-to-primary-config.json>\` from inside a tmux pane or Herdr tab in the firstmate home - see docs/configuration.md \"Devin primary\"."
+    if fm_root_is_secondmate_home "$FM_ROOT"; then
+      emit_block "Firstmate on Devin: this secondmate is not inside a tmux or Herdr pane the daemon can supervise (no TMUX_PANE, no Herdr pane id, no FM_SUPERVISOR_TARGET). Relaunch it through bin/fm-spawn.sh --secondmate --harness devin on a tmux or herdr backend - see docs/configuration.md \"Devin secondmate\"."
+    else
+      emit_block "Firstmate on Devin: this primary is not inside a tmux or Herdr pane the daemon can supervise (no TMUX_PANE, no Herdr pane id, no FM_SUPERVISOR_TARGET). Relaunch it as \`env -u NO_COLOR devin --config <path-to-primary-config.json>\` from inside a tmux pane or Herdr tab in the firstmate home - see docs/configuration.md \"Devin primary\"."
+    fi
   fi
 
   if ! lock_diag=$("$SCRIPT_DIR/fm-lock.sh" 2>&1); then
@@ -225,8 +238,38 @@ cmd_session_start() {
   exit 0
 }
 
+# A secondmate home carries .fm-busy-stop (bin/fm-spawn.sh), and this hook is
+# then the only Stop writer of the parent home's busy record for that gen:
+# every cmd_stop exit records the outcome there, busy when this invocation
+# emitted a block and idle otherwise. Mirrors record_parent_stop_state in
+# bin/fm-turnend-guard.sh (the Claude path); only a regular non-symlink
+# pointer with every key present and an executable writer acts, and the write
+# never fails the hook. Runs on every cmd_stop exit, including the early
+# scope-mismatch and lock-not-owned ones, so a Stop the Devin session itself
+# skipped still settles the parent's verdict for that turn.
+stop_record_parent() {
+  local pointer="$FM_ROOT/.fm-busy-stop" key value writer='' state='' id='' gen='' verdict=idle event=stop
+  [ -f "$pointer" ] && [ ! -L "$pointer" ] || return 0
+  while IFS='=' read -r key value; do
+    case "$key" in
+      writer) writer=$value ;;
+      state) state=$value ;;
+      id) id=$value ;;
+      gen) gen=$value ;;
+    esac
+  done < "$pointer"
+  [ -n "$state" ] && [ -n "$id" ] && [ -n "$gen" ] && [ -x "$writer" ] || return 0
+  if [ "$FM_DEVIN_STOP_BLOCKED" -eq 1 ]; then
+    verdict=busy
+    event=stop-blocked
+  fi
+  "$writer" apply "$state" "$id" "$verdict" --gen "$gen" --source devin-hook --event "$event" >/dev/null 2>&1 || true
+}
+
 cmd_stop() {
   local payload heal='' heal_rc guard_out reason
+  FM_DEVIN_STOP_BLOCKED=0
+  trap stop_record_parent EXIT
   payload=$(cat 2>/dev/null || true)
   # shellcheck source=bin/fm-primary-scope-lib.sh
   . "$SCRIPT_DIR/fm-primary-scope-lib.sh"
@@ -262,6 +305,7 @@ cmd_stop() {
     reason=$(printf '%s' "$guard_out" | jq -r 'if type == "object" then (.reason // "") else "" end' 2>/dev/null || true)
     [ -n "$reason" ] && guard_out=$(jq -cn --arg r "$heal$reason" '{decision:"block",reason:$r}')
   fi
+  FM_DEVIN_STOP_BLOCKED=1
   printf '%s\n' "$guard_out"
   exit 0
 }

@@ -34,8 +34,8 @@ pass "Devin native identity; anchored liveness"
 [ "$(fm_control_exit_command devin)" = /quit ] || fail 'wrong exit command'
 fm_control_harness_supports_kind devin ship || fail 'ship refused'
 fm_control_harness_supports_kind devin scout || fail 'scout refused'
-! fm_control_harness_supports_kind devin secondmate || fail 'secondmate accepted'
-pass "worker-only resolution and lifecycle capabilities"
+fm_control_harness_supports_kind devin secondmate || fail 'secondmate refused'
+pass "worker and secondmate resolution and lifecycle capabilities"
 
 [ "$(fm_composer_classify_content 1 '❭ Ask Devin to build features, fix bugs, or work on your code' "$FM_COMPOSER_IDLE_RE_DEFAULT" sensitive '' 1 0)" = empty ] || fail 'idle placeholder not empty'
 [ "$(fm_composer_classify_content 1 '❭ unsubmitted draft')" = pending ] || fail 'typed draft not preserved'
@@ -122,7 +122,7 @@ pass "keep-ai-trailers leaves Devin attribution on"
 
 case_dir="$TMP_ROOT/spawn"
 fakebin=$(make_spawn_fakebin "$case_dir/fake" claude)
-fm_fake_exit0 "$fakebin" devin
+fm_fake_exit0 "$fakebin" devin zellij
 home="$case_dir/home"
 proj="$case_dir/project"
 wt="$case_dir/wt"
@@ -140,8 +140,13 @@ case "$launch" in *--effort*|*--thinking*) fail 'independent effort reached Devi
 assert_grep 'effort=xhigh' "$home/state/devin-worker.meta" 'effort not recorded'
 assert_present "$home/state/devin-worker.devin-config.json" 'spawn did not wire hooks'
 [ "$(fm_busy_classify tmux fake:w devin devin-worker "$home/state")" = 'busy fm-spawn' ] || fail 'launch not armed'
-if out=$(fm_test_run_spawn "$home" "$wt" "$fakebin" devin-sm "$proj" --secondmate --harness devin 2>&1)
-then fail 'Devin secondmate launch accepted'; fi
-assert_contains "$out" 'crewmate/scout adapter only' 'wrong secondmate refusal'
-assert_contains "$out" 'Devin primary' 'the Devin secondmate refusal did not point at the Devin primary setup'
+# A raw launch command for a devin secondmate is refused: it installs no
+# hooks, so the mate could never be supervised.
+if out=$(fm_test_run_spawn "$home" "$wt" "$fakebin" devin-sm "$proj" --secondmate 'devin --permission-mode dangerous' 2>&1)
+then fail 'raw Devin secondmate launch accepted'; fi
+assert_contains "$out" 'a devin secondmate needs the canonical --harness devin launch' 'wrong raw secondmate refusal'
+# A non-tmux/herdr backend is refused too, before any provisioning.
+if out=$(fm_test_run_spawn "$home" "$wt" "$fakebin" devin-sm "$proj" --secondmate --harness devin --backend zellij 2>&1)
+then fail 'Devin secondmate launch on a non-tmux/herdr backend accepted'; fi
+assert_contains "$out" 'quiet daemon is verified only on tmux and Herdr panes' 'wrong backend refusal'
 pass "scout launch carries Fusion, autonomy, typed brief and hooks; effort recorded only"

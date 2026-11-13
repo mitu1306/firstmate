@@ -14,7 +14,10 @@
 # FM_FAKE_TMUX_WINDOW, capture-pane echoes FM_FAKE_TMUX_CAPTURE) plus a fake
 # treehouse (durable lease of FM_FAKE_TREEHOUSE_HOME, recording the lease holder
 # to FM_FAKE_TREEHOUSE_LEASE_FILE; `return` removes the target and lease unless
-# FM_FAKE_TREEHOUSE_RETURN_FAIL is set). Echoes the fakebin dir.
+# FM_FAKE_TREEHOUSE_RETURN_FAIL is set, and `destroy` skips the slot named by
+# FM_FAKE_TREEHOUSE_LEASED unless --include-leased is passed, is a dry run that
+# exits 0 and only reports without --yes, and with --yes removes the named pool
+# slot unless FM_FAKE_TREEHOUSE_DESTROY_FAIL is set). Echoes the fakebin dir.
 make_fake_tmux() {
   local dir=$1 fakebin capture
   fakebin=$(fm_fakebin "$dir")
@@ -163,6 +166,40 @@ case "${1:-}" in
     [ -z "${FM_FAKE_TREEHOUSE_RETURN_FAIL:-}" ] || exit 17
     [ -n "${FM_FAKE_TREEHOUSE_LEASE_FILE:-}" ] && rm -f "$FM_FAKE_TREEHOUSE_LEASE_FILE"
     [ -n "$target" ] && rm -rf -- "$target"
+    exit 0
+    ;;
+  destroy)
+    # Like the real treehouse v2 `destroy <slot>`: without --yes a dry run that
+    # exits 0 whether it would destroy or skip the slot and says which in its
+    # report; with --yes a skip exits non-zero, otherwise the slot and its git
+    # worktree registration are removed. FM_FAKE_TREEHOUSE_DESTROY_FAIL makes
+    # only that removal fail.
+    shift
+    target= yes= leased_ok=
+    for arg in "$@"; do
+      case "$arg" in
+        --yes) yes=1 ;;
+        --include-leased) leased_ok=1 ;;
+        --*) ;;
+        *) target=$arg ;;
+      esac
+    done
+    [ -n "$target" ] || exit 2
+    if [ -n "${FM_FAKE_TREEHOUSE_LEASED:-}" ] && [ -z "$leased_ok" ] \
+      && [ "$(cd "$target" 2>/dev/null && pwd -P)" = "$(cd "$FM_FAKE_TREEHOUSE_LEASED" 2>/dev/null && pwd -P)" ]; then
+      if [ -z "$yes" ]; then
+        printf 'Dry run: nothing disposable to destroy in %s.\nSkipped 1 worktree:\n  1     [leased]  %s  re-run with --include-leased to include\n' "$target" "$target"
+        exit 0
+      fi
+      printf 'did not destroy 1 (leased) worktree: %s\n' "$target"
+      exit 1
+    fi
+    if [ -z "$yes" ]; then
+      printf 'Dry run: would destroy 1 worktree in %s.\n  1     [disposable]  %s\n' "$target" "$target"
+      exit 0
+    fi
+    [ -z "${FM_FAKE_TREEHOUSE_DESTROY_FAIL:-}" ] || exit 1
+    git -C "$target" worktree remove --force "$target" 2>/dev/null || rm -rf -- "$target"
     exit 0
     ;;
 esac
