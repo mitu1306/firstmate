@@ -1296,10 +1296,12 @@ A preexisting project-bearing charter is also refused until it is re-scaffolded 
 
 The lease is held under the secondmate id until explicit retirement or seed rollback returns it, so normal restarts do not free or recycle the home.
 Teardown of a leased home fails closed if `treehouse return` cannot release the lease; plain-clone homes with no treehouse pool slot are removed directly.
+Non-forced retirement of a local home refuses while any of its project clones, or a pool slot made from one, holds work no remote has, and it destroys those clones' pool slots before removing the home; the [`bin/fm-teardown.sh`](../bin/fm-teardown.sh) header owns both.
 
 ### Project modes and backlog handoff
 
 Secondmate routes cover `no-mistakes` and `direct-PR` projects; `local-only` projects remain main-firstmate work.
+Seeding refuses a `local-only` project, and `fm-spawn.sh` refuses a `--mode local-only` ship inside a secondmate home, because that home's local main is deleted with it at retirement.
 For `no-mistakes` projects, seeding initializes only projects newly cloned into a secondmate home and refuses to mutate a preexisting clone that is not already initialized.
 
 After creating a secondmate, move existing main-backlog queued items that you have judged in-scope with `fm-backlog-handoff.sh <secondmate-id> <item-key>...`; it refuses In flight, Done, or non-secondmate homes, and its [script header](../bin/fm-backlog-handoff.sh) owns route-specific wake outcomes and retries.
