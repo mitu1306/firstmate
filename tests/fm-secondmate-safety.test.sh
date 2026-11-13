@@ -1836,6 +1836,25 @@ test_secondmate_teardown_retires_pushed_project_work_and_its_pool_slots() {
   pass "secondmate retirement proceeds when project work is on a remote and destroys only the retired repos' pool slots"
 }
 
+test_secondmate_teardown_ignores_upstream_tags_on_no_remote_branch() {
+  local work
+  make_project_home_case upstream-tag
+  work="$TMP_ROOT/project-home-upstream-tag/work"
+  git clone --quiet "$SMP_ORIGIN" "$work"
+  git -C "$work" checkout --quiet -b hotfix
+  smp_commit "$work" hotfix.txt 'Hotfix release'
+  git -C "$work" tag v1.0.1
+  git -C "$work" push --quiet origin hotfix v1.0.1
+  git -C "$work" push --quiet origin --delete hotfix
+  git -C "$SMP_CLONE" fetch --quiet --tags origin
+  git -C "$SMP_CLONE" rev-parse --verify --quiet refs/tags/v1.0.1 >/dev/null \
+    || fail "the fixture home clone did not receive the upstream tag"
+  run_project_home_teardown
+  expect_code 0 "$SMP_RC" "an upstream tag on a commit in no remote branch must not block retirement: $SMP_OUT"
+  [ ! -e "$SMP_SUB" ] || fail "the retirement left the secondmate home behind"
+  pass "secondmate retirement ignores an upstream tag whose commit is on no remote branch"
+}
+
 test_secondmate_force_teardown_discards_unlanded_project_work() {
   local slot
   make_project_home_case forced
@@ -3403,6 +3422,7 @@ test_fm_send_refuses_bare_window_without_home_meta
 test_secondmate_teardown_retires_empty_home
 test_secondmate_teardown_refuses_unlanded_project_work
 test_secondmate_teardown_retires_pushed_project_work_and_its_pool_slots
+test_secondmate_teardown_ignores_upstream_tags_on_no_remote_branch
 test_secondmate_force_teardown_discards_unlanded_project_work
 test_secondmate_teardown_refuses_when_a_pool_slot_cannot_be_destroyed
 test_branch_actor_cannot_retire_secondmate

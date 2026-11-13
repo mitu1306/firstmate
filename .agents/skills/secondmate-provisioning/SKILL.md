@@ -245,7 +245,7 @@ Run `bin/fm-teardown.sh <id>` for `kind=secondmate` only when the captain or mai
 The safety check is the secondmate's own home.
 Teardown refuses while its `state/*.meta` contains in-flight work.
 Non-forced retirement also refuses while any parent pending-reply for that id is still unresolved.
-A local home also refuses while any clone under its `projects/`, or any pool slot made from one, holds uncommitted changes, a stash, or commits on a branch, tag, or detached HEAD that no remote has; the [`bin/fm-teardown.sh`](../../../bin/fm-teardown.sh) header owns that test.
+A local home also refuses while any clone under its `projects/`, or any pool slot made from one, holds uncommitted changes, a stash, or commits on a branch or detached HEAD that no remote has; the [`bin/fm-teardown.sh`](../../../bin/fm-teardown.sh) header owns that test.
 A remote route delegates the in-flight guard to its configured host and additionally refuses while the primary has a pending handoff outbox.
 SSH exit 255 preserves the route and local records because remote completion is unknown.
 When retirement proceeds, teardown kills the direct endpoint, removes every parent pending-reply record for that id including resolved leftovers and its delivery confirmation, removes the `data/secondmates.md` route, clears the main home metadata, and removes the retired secondmate home.

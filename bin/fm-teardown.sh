@@ -194,8 +194,8 @@
 # teardown refuses while their home has in-flight crewmate meta files, and
 # while any git clone under a LOCAL home's projects/ - or any worktree of one,
 # including an idle pool slot - holds work the landed-work rule above does not
-# find on a remote: uncommitted changes, a local branch, tag, or detached HEAD
-# with commits that no remote-tracking branch other than the no-mistakes mirror
+# find on a remote: uncommitted changes, a local branch or detached HEAD with
+# commits that no remote-tracking branch other than the no-mistakes mirror
 # contains (after refreshing those refs), or a stash. The refusal names each
 # project, branch, commit, slot, and stash entry and changes nothing; it is
 # proved again after the mate's endpoint is killed and before the home is
@@ -224,15 +224,17 @@
 # repository; --force adds --include-unlanded --include-in-use, never a lease.
 # Before the mate's endpoint is killed, the same destroy runs as treehouse's
 # dry run (no --yes) over every such slot except the worktrees of the home's
-# own child tasks, which forced child cleanup returns first; a slot treehouse
-# would skip (leased, in use, or unlanded beyond the flags) refuses the
-# retirement there, naming the slot and its treehouse return --force step, and
-# changes nothing. A slot treehouse still will not destroy at removal time
-# stops the retirement with the home intact. Slots of any other repository are
-# never touched. Removing a
-# leased home releases its durable treehouse lease so the pool slot is freed,
-# never left leased forever. If the treehouse return fails, teardown leaves the
-# leased home and state in place instead of hiding a still-held lease.
+# own child tasks, which forced child cleanup returns first. That dry run exits
+# 0 even when it skips the named slot, so only its "would destroy 1 worktree"
+# report proves the slot destroyable; any other answer (a skip for a lease,
+# processes, or unlanded work beyond the flags) refuses the retirement there,
+# naming the slot and its treehouse return --force step, and changes nothing.
+# A slot treehouse still will not destroy at removal time stops the retirement
+# with the home intact. Slots of any other repository are never touched.
+# Removing a leased home releases its durable treehouse lease so the pool slot
+# is freed, never left leased forever. If the treehouse return fails, teardown
+# leaves the leased home and state in place instead of hiding a still-held
+# lease.
 # Usage: fm-teardown.sh <task-id> [--force] [--legacy-record]
 #   --force skips ordinary-task dirty and landed-work checks, skips scout report
 #   checks and closes the scout as discarded with no report recorded, and
@@ -2247,7 +2249,7 @@ $listed
 
 EOT
   fi
-  if ! commits=$(commits_not_on_remote "$clone" %h --branches --tags "${heads[@]+"${heads[@]}"}" 2>/dev/null); then
+  if ! commits=$(commits_not_on_remote "$clone" %h --branches "${heads[@]+"${heads[@]}"}" 2>/dev/null); then
     report="$report  cannot inspect the clone for commits not on a remote"$'\n'
   elif [ -n "$commits" ]; then
     # Tracking refs that do not show the work prove nothing until refreshed.
@@ -2260,13 +2262,10 @@ EOT
       fi
       [ -n "$commits" ] || continue
       count=$(printf '%s\n' "$commits" | wc -l | tr -d ' ')
-      case "$ref" in
-        refs/heads/*) report="$report  branch ${ref#refs/heads/}: $count commit(s) not on any remote:"$'\n' ;;
-        *) report="$report  tag ${ref#refs/tags/}: $count commit(s) not on any remote:"$'\n' ;;
-      esac
+      report="$report  branch ${ref#refs/heads/}: $count commit(s) not on any remote:"$'\n'
       report="$report$(printf '%s\n' "$commits" | head -5 | sed 's/^/    /')"$'\n'
     done <<EOT
-$(git -C "$clone" for-each-ref --format='%(refname)' refs/heads refs/tags 2>/dev/null)
+$(git -C "$clone" for-each-ref --format='%(refname)' refs/heads 2>/dev/null)
 EOT
     for head in "${detached_heads[@]+"${detached_heads[@]}"}"; do
       commits=$(commits_not_on_remote "$clone" '%h %s' "${head#*$'\t'}" 2>/dev/null) || commits="cannot inspect"
@@ -2365,8 +2364,10 @@ secondmate_home_child_worktree() {  # <home> <canonical-slot>
 # adds the unlanded and in-use classes it authorizes discarding, never a lease.
 # preflight runs that same destroy as treehouse's dry run before anything
 # destructive, skipping child task worktrees that forced child cleanup returns
-# first, and refuses on any slot treehouse would skip. execute destroys them;
-# any slot treehouse will not destroy stops the retirement with the home intact.
+# first. The dry run exits 0 even when it skips the named slot, so it refuses
+# unless treehouse reports it would destroy that one worktree. execute destroys
+# them; any slot treehouse will not destroy stops the retirement with the home
+# intact.
 destroy_secondmate_home_pool_slots() {  # <abs-home> <label> <preflight|execute>
   local home=$1 label=$2 mode=$3 slots clone slot out flags=()
   slots=$(secondmate_home_pool_slots "$home")
@@ -2381,7 +2382,8 @@ destroy_secondmate_home_pool_slots() {  # <abs-home> <label> <preflight|execute>
     [ -n "$slot" ] || continue
     if [ "$mode" = preflight ]; then
       ! secondmate_home_child_worktree "$home" "$slot" || continue
-      if ! out=$( ( cd "$clone" && treehouse destroy "$slot" "${flags[@]+"${flags[@]}"}" ) 2>&1 ); then
+      out=$( ( cd "$clone" && treehouse destroy "$slot" "${flags[@]+"${flags[@]}"}" ) 2>&1 ) || true
+      if ! printf '%s\n' "$out" | grep -F 'would destroy 1 worktree' >/dev/null; then
         [ -z "$out" ] || printf '%s\n' "$out" >&2
         echo "REFUSED: treehouse will not destroy pool slot $slot of $label $home, so retiring it would leave that slot pointing at a deleted repository; retirement changed nothing." >&2
         echo "Once nothing uses that slot, release it with (cd $clone && treehouse return --force $slot), then retry." >&2
