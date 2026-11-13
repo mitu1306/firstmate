@@ -42,7 +42,9 @@
 #   the explicit mode carries less rigor than the project's standing posture, a
 #   loud one-line deviation notice is printed and the spawn continues.
 #   no-mistakes-prod-only is a registry policy rather than a task mode and is
-#   refused as a flag value.
+#   refused as a flag value. --mode local-only is refused when FM_HOME carries
+#   the secondmate-home marker, the same rule bin/fm-home-seed.sh applies at
+#   seeding: a mate home's local main is deleted with the home at retirement.
 #   --branch-prefix is the optional prefix selected at intake for this ship's
 #   immutable branch, defaulting to "fm/". It must agree with the branch recorded
 #   in the brief, and is refused on scouts, secondmates, and relaunches. When the
@@ -974,6 +976,8 @@ fm_backlog_directory_present "$STATE" "state directory" || {
 . "$SCRIPT_DIR/fm-dod-lib.sh"
 # shellcheck source=bin/fm-role-lib.sh
 . "$SCRIPT_DIR/fm-role-lib.sh"
+# shellcheck source=bin/fm-primary-scope-lib.sh
+. "$SCRIPT_DIR/fm-primary-scope-lib.sh"
 # shellcheck source=bin/fm-trace-context-lib.sh
 . "$SCRIPT_DIR/fm-trace-context-lib.sh"
 # shellcheck source=bin/fm-remote-readiness-lib.sh
@@ -1306,6 +1310,15 @@ else
       exit 1
       ;;
     esac
+    # A secondmate home's local main is not a landing place: it is deleted with
+    # the home at retirement, so bin/fm-home-seed.sh refuses local-only projects
+    # for secondmates. The mate's own data/projects.md is ordinary editable
+    # state, so the same rule is enforced here, one level down, on the marker
+    # bin/fm-primary-scope-lib.sh recognizes.
+    if [ "$MODE" = local-only ] && fm_root_is_secondmate_home "$FM_HOME"; then
+      echo "error: local-only ship spawns are refused in a secondmate home ($FM_HOME): its local main is removed with the home at retirement; secondmate routes support only no-mistakes and direct-PR projects (the bin/fm-home-seed.sh rule), so local-only work stays with the main firstmate" >&2
+      exit 1
+    fi
     if [ "$UPSTREAM_CONSENT_SET" -eq 1 ]; then
       if [ "$MODE" = local-only ]; then
         echo "error: --upstream-consent is meaningless on local-only, which publishes nothing; drop it" >&2

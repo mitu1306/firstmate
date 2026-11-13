@@ -14,7 +14,8 @@
 # FM_FAKE_TMUX_WINDOW, capture-pane echoes FM_FAKE_TMUX_CAPTURE) plus a fake
 # treehouse (durable lease of FM_FAKE_TREEHOUSE_HOME, recording the lease holder
 # to FM_FAKE_TREEHOUSE_LEASE_FILE; `return` removes the target and lease unless
-# FM_FAKE_TREEHOUSE_RETURN_FAIL is set). Echoes the fakebin dir.
+# FM_FAKE_TREEHOUSE_RETURN_FAIL is set, and `destroy` removes the named pool
+# slot unless FM_FAKE_TREEHOUSE_DESTROY_FAIL is set). Echoes the fakebin dir.
 make_fake_tmux() {
   local dir=$1 fakebin capture
   fakebin=$(fm_fakebin "$dir")
@@ -163,6 +164,19 @@ case "${1:-}" in
     [ -z "${FM_FAKE_TREEHOUSE_RETURN_FAIL:-}" ] || exit 17
     [ -n "${FM_FAKE_TREEHOUSE_LEASE_FILE:-}" ] && rm -f "$FM_FAKE_TREEHOUSE_LEASE_FILE"
     [ -n "$target" ] && rm -rf -- "$target"
+    exit 0
+    ;;
+  destroy)
+    # Removes the named pool slot and its git worktree registration, like the
+    # real `treehouse destroy <slot> --yes`; FM_FAKE_TREEHOUSE_DESTROY_FAIL skips.
+    shift
+    target=
+    for arg in "$@"; do
+      case "$arg" in --*) ;; *) target=$arg ;; esac
+    done
+    [ -z "${FM_FAKE_TREEHOUSE_DESTROY_FAIL:-}" ] || exit 1
+    [ -n "$target" ] || exit 2
+    git -C "$target" worktree remove --force "$target" 2>/dev/null || rm -rf -- "$target"
     exit 0
     ;;
 esac
