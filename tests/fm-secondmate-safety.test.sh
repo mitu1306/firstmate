@@ -1851,7 +1851,26 @@ test_secondmate_force_teardown_discards_unlanded_project_work() {
 }
 
 test_secondmate_teardown_refuses_when_a_pool_slot_cannot_be_destroyed() {
-  local slot
+  local slot mode
+  for mode in plain --force; do
+    make_project_home_case "leased-slot${mode}"
+    add_pool_slot "$SMP_CLONE" "$SMP_POOL" 1
+    slot="$SMP_POOL/1/alpha"
+    SMP_RC=0
+    SMP_OUT=$(PATH="$SMP_FAKEBIN:$PATH" FM_ROOT_OVERRIDE="$SMP_FMROOT" FM_HOME="$SMP_HOME" FM_FAKE_TMUX_LOG="$SMP_LOG" \
+      FM_FAKE_TMUX_CAPTURE="$(dirname "$SMP_LOG")/pane.txt" FM_FAKE_TREEHOUSE_LEASED="$slot" \
+      "$ROOT/bin/fm-teardown.sh" domain ${mode#plain} 2>&1) || SMP_RC=$?
+    expect_code 1 "$SMP_RC" "$mode: retirement must refuse a pool slot treehouse will not destroy: $SMP_OUT"
+    assert_contains "$SMP_OUT" "REFUSED: treehouse will not destroy pool slot" "$mode: the refusal must say why"
+    assert_contains "$SMP_OUT" "treehouse return --force" "$mode: the refusal must name the release step"
+    assert_not_contains "$(cat "$SMP_LOG")" "kill-window" "$mode: the refusal must come before the mate's endpoint is killed"
+    assert_not_contains "$(cat "$SMP_LOG")" "--yes" "$mode: the refusal must come before any slot is destroyed"
+    [ -d "$slot" ] || fail "$mode: the refused retirement removed the leased pool slot"
+    [ -d "$SMP_CLONE/.git" ] || fail "$mode: the refused retirement removed the home"
+    [ -f "$SMP_HOME/state/domain.meta" ] || fail "$mode: the refused retirement removed the secondmate record"
+    grep -F -- '- domain ' "$SMP_HOME/data/secondmates.md" >/dev/null || fail "$mode: the refused retirement removed the registry route"
+  done
+
   make_project_home_case destroy-fails
   add_pool_slot "$SMP_CLONE" "$SMP_POOL" 1
   slot="$SMP_POOL/1/alpha"
@@ -1863,7 +1882,7 @@ test_secondmate_teardown_refuses_when_a_pool_slot_cannot_be_destroyed() {
   assert_contains "$SMP_OUT" "$slot" "the failure must name the pool slot"
   [ -d "$SMP_CLONE/.git" ] || fail "retirement removed the home while one of its pool slots still pointed into it"
   grep -F -- '- domain ' "$SMP_HOME/data/secondmates.md" >/dev/null || fail "the failed retirement removed the registry route"
-  pass "secondmate retirement keeps the home and route when a pool slot of its repo cannot be destroyed"
+  pass "secondmate retirement refuses before the kill on a slot treehouse would skip, and keeps the home when a destroy still fails"
 }
 
 # A second mate's status log relays child outcomes, so a merged child PR there

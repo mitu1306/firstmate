@@ -221,9 +221,15 @@
 # home goes, every Treehouse pool slot made from one of its project clones
 # (outside the home, proved by fm_treehouse_pool_slot) is destroyed through
 # `treehouse destroy <slot> --yes`, so no slot is left pointing at a deleted
-# repository; --force adds --include-unlanded --include-in-use, never a lease,
-# and a slot treehouse will not destroy stops the retirement with the home
-# intact. Slots of any other repository are never touched. Removing a
+# repository; --force adds --include-unlanded --include-in-use, never a lease.
+# Before the mate's endpoint is killed, the same destroy runs as treehouse's
+# dry run (no --yes) over every such slot except the worktrees of the home's
+# own child tasks, which forced child cleanup returns first; a slot treehouse
+# would skip (leased, in use, or unlanded beyond the flags) refuses the
+# retirement there, naming the slot and its treehouse return --force step, and
+# changes nothing. A slot treehouse still will not destroy at removal time
+# stops the retirement with the home intact. Slots of any other repository are
+# never touched. Removing a
 # leased home releases its durable treehouse lease so the pool slot is freed,
 # never left leased forever. If the treehouse return fails, teardown leaves the
 # leased home and state in place instead of hiding a still-held lease.
@@ -2340,23 +2346,49 @@ EOF
   done
 }
 
+# A slot that is the recorded worktree of one of <home>'s own child tasks.
+secondmate_home_child_worktree() {  # <home> <canonical-slot>
+  local home=$1 slot=$2 child_meta child_wt
+  for child_meta in "$home/state"/*.meta; do
+    [ -e "$child_meta" ] || continue
+    child_wt=$(meta_value "$child_meta" worktree)
+    [ -n "$child_wt" ] && [ -d "$child_wt" ] || continue
+    [ "$(canonical_existing_dir "$child_wt" 2>/dev/null)" != "$slot" ] || return 0
+  done
+  return 1
+}
+
 # A retired home takes its project repositories with it, so a pool slot made
 # from one would be left pointing at a deleted .git. Destroys each such slot
 # through treehouse before the home goes. A non-forced retirement already
 # refused unlanded work in them, so the safe default destroy applies; --force
 # adds the unlanded and in-use classes it authorizes discarding, never a lease.
-# Any slot treehouse will not destroy stops the retirement with the home intact.
-destroy_secondmate_home_pool_slots() {  # <abs-home> <label>
-  local home=$1 label=$2 slots clone slot out flags=(--yes)
+# preflight runs that same destroy as treehouse's dry run before anything
+# destructive, skipping child task worktrees that forced child cleanup returns
+# first, and refuses on any slot treehouse would skip. execute destroys them;
+# any slot treehouse will not destroy stops the retirement with the home intact.
+destroy_secondmate_home_pool_slots() {  # <abs-home> <label> <preflight|execute>
+  local home=$1 label=$2 mode=$3 slots clone slot out flags=()
   slots=$(secondmate_home_pool_slots "$home")
   [ -n "$slots" ] || return 0
   command -v treehouse >/dev/null 2>&1 || {
     echo "error: treehouse command not found; cannot destroy the pool slots of $label $home" >&2
     return 1
   }
+  [ "$mode" = preflight ] || flags+=(--yes)
   [ "$FORCE" != "--force" ] || flags+=(--include-unlanded --include-in-use)
   while IFS=$'\t' read -r clone slot; do
     [ -n "$slot" ] || continue
+    if [ "$mode" = preflight ]; then
+      ! secondmate_home_child_worktree "$home" "$slot" || continue
+      if ! out=$( ( cd "$clone" && treehouse destroy "$slot" "${flags[@]+"${flags[@]}"}" ) 2>&1 ); then
+        [ -z "$out" ] || printf '%s\n' "$out" >&2
+        echo "REFUSED: treehouse will not destroy pool slot $slot of $label $home, so retiring it would leave that slot pointing at a deleted repository; retirement changed nothing." >&2
+        echo "Once nothing uses that slot, release it with (cd $clone && treehouse return --force $slot), then retry." >&2
+        return 1
+      fi
+      continue
+    fi
     if ! out=$( ( cd "$clone" && treehouse destroy "$slot" "${flags[@]}" ) 2>&1 ) || [ -e "$slot" ]; then
       [ -z "$out" ] || printf '%s\n' "$out" >&2
       echo "error: treehouse did not destroy pool slot $slot of $label $home; keeping the home so the slot still resolves" >&2
@@ -3166,7 +3198,7 @@ remove_firstmate_home() {  # <home> <label> <task-id> <backend>
     restore_firstmate_home_process_events "$abs_home_path" "$label" "$process_event_backup" || return $?
     return 1
   fi
-  if ! destroy_secondmate_home_pool_slots "$abs_home_path" "$label"; then
+  if ! destroy_secondmate_home_pool_slots "$abs_home_path" "$label" execute; then
     restore_firstmate_home_process_events "$abs_home_path" "$label" "$process_event_backup" || return $?
     return 1
   fi
@@ -3888,7 +3920,7 @@ if [ "$KIND" = secondmate ]; then
   handoff_wake_retire_stage_recover "$HOME_PATH" || exit 1
   handoff_wake_retire_validate || exit 1
   pending_replies_recovery_validate initial || exit 1
-  validate_firstmate_home_for_removal "$HOME_PATH" "secondmate home" "$ID" >/dev/null || exit 1
+  SM_ABS_HOME=$(validate_firstmate_home_for_removal "$HOME_PATH" "secondmate home" "$ID") || exit 1
   if [ "$FORCE" = "--force" ]; then
     validate_firstmate_home_children_removal "$HOME_PATH" || exit 1
     preflight_descendant_task_locks "$HOME_PATH" || exit 1
@@ -3917,6 +3949,9 @@ fi
 
 if [ "$KIND" = secondmate ]; then
   preflight_firstmate_home_process_event_tree "$HOME_PATH" "secondmate home" || exit 1
+  if [ -n "$SM_ABS_HOME" ]; then
+    destroy_secondmate_home_pool_slots "$SM_ABS_HOME" "secondmate home" preflight || exit 1
+  fi
 fi
 
 if [ "$KIND" = secondmate ] && [ "$FORCE" = "--force" ]; then
