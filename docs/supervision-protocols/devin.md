@@ -1,6 +1,6 @@
 Mode: Devin quiet-daemon supervision.
 
-A Devin primary has no way to be woken from inside the model, so it is always supervised by the quiet (or away) daemon, never by an in-turn watcher.
+A Devin firstmate session, primary or secondmate, has no way to be woken from inside the model, so it is always supervised by the quiet (or away) daemon, never by an in-turn watcher.
 Its `SessionStart` hook (`bin/fm-devin-primary.sh session-start`) takes the session lock and starts the quiet daemon before the first turn; the daemon runs the watcher outside the model and types wakes into this pane.
 
 When this session owns supervision:
@@ -10,10 +10,10 @@ When this session owns supervision:
 3. Never open `ask_user_question`; the hook blocks it because a held dialog wedges the turn and the daemon's delivery with it.
    Ask the captain in plain chat and end the turn instead.
 4. In quiet mode, never type `/quiet off` or otherwise leave daemon supervision: there is no other supervision path on this harness.
-   If the captain asks for normal supervision, explain that quiet mode is the only posture that keeps a Devin primary supervised, and keep it.
+   If the captain asks for normal supervision, explain that quiet mode is the only posture that keeps a Devin session supervised, and keep it.
    In away mode, the captain's return still goes through `bin/fm-afk-return.sh` and its catch-up gate, as `away-quiet-supervision` says.
    While that gate (`state/.afk-return-catchup`) is pending, no daemon or watcher runs and no wake reaches this pane, because nothing can start the daemon until the gate clears.
    With work in flight, the `Stop` hook refuses the turn end with a bounded block that names `bin/fm-afk-return.sh check` as the unblock action; past its per-turn cap it lets the turn end, and with nothing in flight it allows silently.
    Run `bin/fm-afk-return.sh check` and work its blockers until the gate clears; the next `Stop` (or `bin/fm-devin-primary.sh ensure`) then puts the home back under quiet daemon supervision.
 5. The `Stop` hook refuses a turn end while the daemon is unhealthy and tries to restart it itself.
-   Manual repair is `bin/fm-devin-primary.sh ensure`; if that fails, tell the captain plainly rather than improvising another watcher.
+   Manual repair is `bin/fm-devin-primary.sh ensure`; if that fails, tell the captain plainly (a secondmate reports it through its parent status channel) rather than improvising another watcher.

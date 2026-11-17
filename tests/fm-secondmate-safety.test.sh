@@ -947,6 +947,68 @@ test_home_seed_refuses_local_only_project() {
   pass "home seeding refuses local-only projects"
 }
 
+# The seed refuses local-only projects for secondmates because their local main
+# lives only inside the mate home. A mate's own data/projects.md is ordinary
+# editable state, so fm-spawn must refuse --mode local-only in a secondmate home
+# too, or the seed rule is bypassed one level down. A primary home keeps it.
+test_spawn_refuses_local_only_ship_in_secondmate_home() {
+  local dir kind home proj wt fakebin out rc
+  dir="$TMP_ROOT/local-only-spawn"
+  fakebin=$(fm_fakebin "$dir")
+  cat > "$fakebin/tmux" <<'SH'
+#!/usr/bin/env bash
+window_file="$(dirname "$0")/.spawn-window"
+case "$*" in
+  *"#{pane_current_path}"*) printf '%s\n' "${FM_FAKE_PANE_PATH:-}"; exit 0 ;;
+esac
+case "${1:-}" in
+  display-message) printf 'firstmate\n' ;;
+  list-windows) [ ! -s "$window_file" ] || cat "$window_file" ;;
+  new-window)
+    name=
+    previous=
+    for arg in "$@"; do
+      [ "$previous" = -n ] && name=$arg
+      previous=$arg
+    done
+    printf '%s\n' "$name" > "$window_file"
+    ;;
+esac
+exit 0
+SH
+  chmod +x "$fakebin/tmux"
+  fm_fake_exit0 "$fakebin" treehouse no-mistakes
+  for kind in mate primary; do
+    home="$dir/$kind-home"
+    proj="$dir/$kind-alpha"
+    wt="$dir/$kind-wt"
+    mkdir -p "$home/data/lo-$kind" "$home/projects" "$home/state" "$home/config" "$home/user-home"
+    printf 'claude\n' > "$home/config/crew-harness"
+    printf '%s\n' "$$" > "$home/state/.lock"
+    touch "$home/state/.last-watcher-beat"
+    [ "$kind" = primary ] || printf 'domain\n' > "$home/.fm-secondmate-home"
+    fm_git_worktree "$proj" "$wt" "fm/lo-$kind"
+    printf '# Task\n## Captain'"'"'s intent\nLand locally.\n\n## Firstmate spec\nNothing.\n' > "$home/data/lo-$kind/brief.md"
+    rc=0
+    out=$(env -u FM_TRACE_CONTEXT FM_ROOT_OVERRIDE='' FM_HOME="$home" \
+      HOME="$home/user-home" CLAUDE_CONFIG_DIR='' \
+      FM_STATE_OVERRIDE="$home/state" FM_DATA_OVERRIDE="$home/data" \
+      FM_PROJECTS_OVERRIDE="$home/projects" FM_CONFIG_OVERRIDE="$home/config" \
+      FM_SPAWN_NO_GUARD=1 FM_FAKE_PANE_PATH="$wt" TMUX="fake,1,0" PATH="$fakebin:$PATH" \
+      "$ROOT/bin/fm-spawn.sh" "lo-$kind" "$proj" --mode local-only --yolo off 2>&1) || rc=$?
+    if [ "$kind" = mate ]; then
+      [ "$rc" -ne 0 ] || fail "fm-spawn accepted --mode local-only inside a secondmate home: $out"
+      assert_contains "$out" "local-only ship spawns are refused in a secondmate home" "the refusal must name the rule"
+      assert_contains "$out" "fm-home-seed.sh" "the refusal must point at the seed rule"
+      [ ! -e "$home/state/lo-$kind.meta" ] || fail "the refused spawn still published a task record"
+    else
+      expect_code 0 "$rc" "a primary home must still spawn local-only ships: $out"
+      grep -qx 'mode=local-only' "$home/state/lo-$kind.meta" || fail "the primary local-only spawn did not record its mode"
+    fi
+  done
+  pass "fm-spawn refuses local-only ship spawns in a secondmate home and keeps them in a primary home"
+}
+
 # A registry entry whose forge token the parser cannot resolve yields no posture
 # at all. Reading that refusal as an empty mode would walk straight past the
 # local-only routing refusal above and clone the project into a secondmate home,
@@ -1646,6 +1708,200 @@ EOF
   [ ! -e "$home/state/domain.meta" ] || fail "teardown did not clear parent meta"
   grep -F -- '- domain ' "$home/data/secondmates.md" >/dev/null && fail "teardown did not remove secondmate registry route"
   pass "secondmate teardown retires empty homes and releases routing"
+}
+
+# A secondmate home's project clones are the only copy of anything its workers
+# landed locally (or never pushed), so retiring the home without --force must
+# refuse while any clone - or a pool slot made from one - holds work that no
+# remote has. Sets SMP_* for one isolated case: a real parent home, a seeded
+# mate home leased from a firstmate git root, and a projects/alpha clone of a
+# bare origin.
+make_project_home_case() {  # <name>
+  local dir="$TMP_ROOT/project-home-$1"
+  SMP_HOME="$dir/home"
+  SMP_SUB="$dir/sub"
+  SMP_FMROOT="$dir/fmroot"
+  SMP_ORIGIN="$dir/origin/alpha.git"
+  SMP_CLONE="$SMP_SUB/projects/alpha"
+  SMP_POOL="$dir/pool/.treehouse/alpha-0000"
+  make_firstmate_git_root "$SMP_FMROOT"
+  git -C "$SMP_FMROOT" worktree add --quiet --detach "$SMP_SUB" HEAD
+  mkdir -p "$SMP_HOME/state" "$SMP_HOME/data" "$SMP_SUB/state" "$SMP_SUB/projects" "$dir/origin"
+  printf 'domain\n' > "$SMP_SUB/.fm-secondmate-home"
+  fm_git_init_commit "$dir/seed"
+  git clone --quiet --bare "$dir/seed" "$SMP_ORIGIN"
+  git clone --quiet "$SMP_ORIGIN" "$SMP_CLONE"
+  fm_write_secondmate_meta "$SMP_HOME/state/domain.meta" "$SMP_SUB"
+  printf '%s\n' '- domain - design domain (home: '"$SMP_SUB"'; scope: design domain; projects: alpha; added 2026-06-22)' > "$SMP_HOME/data/secondmates.md"
+  SMP_FAKEBIN=$(make_fake_tmux "$dir/fake")
+  SMP_LOG="$dir/fake/tmux.log"
+}
+
+# Adds an idle treehouse pool slot (the <pool>/<n>/<repo> layout beside its
+# treehouse-state.json) as a detached linked worktree of <repo>.
+add_pool_slot() {  # <repo> <pool> <n>
+  mkdir -p "$2/$3"
+  [ -f "$2/treehouse-state.json" ] || printf '{"worktrees":[]}\n' > "$2/treehouse-state.json"
+  git -C "$1" worktree add --quiet --detach "$2/$3/$(basename "$1")" HEAD
+}
+
+smp_commit() {  # <repo> <file> <message>
+  printf '%s\n' "$3" > "$1/$2"
+  git -C "$1" add "$2"
+  git -C "$1" -c user.name='Firstmate Tests' -c user.email='tests@example.invalid' commit -qm "$3"
+}
+
+run_project_home_teardown() {  # [--force]
+  SMP_RC=0
+  SMP_OUT=$(PATH="$SMP_FAKEBIN:$PATH" FM_ROOT_OVERRIDE="$SMP_FMROOT" FM_HOME="$SMP_HOME" FM_FAKE_TMUX_LOG="$SMP_LOG" \
+    FM_FAKE_TMUX_CAPTURE="$(dirname "$SMP_LOG")/pane.txt" \
+    "$ROOT/bin/fm-teardown.sh" domain "$@" 2>&1) || SMP_RC=$?
+}
+
+assert_project_home_retirement_refused() {  # <label>
+  expect_code 1 "$SMP_RC" "$1: retirement must refuse: $SMP_OUT"
+  assert_contains "$SMP_OUT" "REFUSED: secondmate domain home" "$1: the refusal must name the secondmate"
+  assert_contains "$SMP_OUT" "project alpha" "$1: the refusal must name the project"
+  assert_contains "$SMP_OUT" "--force" "$1: the refusal must name the discard path"
+  [ -d "$SMP_CLONE/.git" ] || fail "$1: the refused retirement removed the project clone"
+  [ -f "$SMP_HOME/state/domain.meta" ] || fail "$1: the refused retirement removed the secondmate record"
+  grep -F -- '- domain ' "$SMP_HOME/data/secondmates.md" >/dev/null || fail "$1: the refused retirement removed the registry route"
+  assert_not_contains "$(cat "$SMP_LOG")" "treehouse" "$1: the refused retirement returned or destroyed a pool slot"
+}
+
+test_secondmate_teardown_refuses_unlanded_project_work() {
+  local sha slot
+  make_project_home_case local-main
+  smp_commit "$SMP_CLONE" counter.js 'Add counter page'
+  sha=$(git -C "$SMP_CLONE" rev-parse --short HEAD)
+  run_project_home_teardown
+  assert_project_home_retirement_refused "local commit on main"
+  assert_contains "$SMP_OUT" "branch main" "local commit on main: the refusal must name the branch"
+  assert_contains "$SMP_OUT" "$sha Add counter page" "local commit on main: the refusal must name the commit"
+  [ "$(git -C "$SMP_CLONE" rev-parse --short HEAD)" = "$sha" ] || fail "the refused retirement lost the local commit"
+
+  make_project_home_case local-branch
+  git -C "$SMP_CLONE" checkout --quiet -b fm/side
+  smp_commit "$SMP_CLONE" side.txt 'Side work'
+  git -C "$SMP_CLONE" checkout --quiet main
+  run_project_home_teardown
+  assert_project_home_retirement_refused "unpushed branch"
+  assert_contains "$SMP_OUT" "branch fm/side" "unpushed branch: the refusal must name the branch"
+  assert_contains "$SMP_OUT" "Side work" "unpushed branch: the refusal must name the commit"
+
+  make_project_home_case uncommitted
+  printf 'edit\n' >> "$SMP_CLONE/README.md"
+  run_project_home_teardown
+  assert_project_home_retirement_refused "uncommitted change"
+  assert_contains "$SMP_OUT" "uncommitted changes" "uncommitted change: the refusal must say so"
+
+  make_project_home_case stash
+  printf 'stashed\n' >> "$SMP_CLONE/README.md"
+  git -C "$SMP_CLONE" -c user.name='Firstmate Tests' -c user.email='tests@example.invalid' stash push --quiet -m 'parked edit'
+  run_project_home_teardown
+  assert_project_home_retirement_refused "stash"
+  assert_contains "$SMP_OUT" "parked edit" "stash: the refusal must name the stash entry"
+
+  make_project_home_case dirty-slot
+  add_pool_slot "$SMP_CLONE" "$SMP_POOL" 1
+  slot="$SMP_POOL/1/alpha"
+  printf 'scratch\n' > "$slot/scratch.txt"
+  run_project_home_teardown
+  assert_project_home_retirement_refused "dirty pool slot"
+  assert_contains "$SMP_OUT" "$slot" "dirty pool slot: the refusal must name the slot"
+  [ -f "$slot/scratch.txt" ] || fail "the refused retirement removed the dirty pool slot's work"
+  pass "secondmate retirement refuses unlanded commits, branches, uncommitted changes, stashes, and dirty slots in its project clones"
+}
+
+test_secondmate_teardown_retires_pushed_project_work_and_its_pool_slots() {
+  local slot foreign_repo foreign_slot
+  make_project_home_case pushed
+  smp_commit "$SMP_CLONE" counter.js 'Add counter page'
+  git -C "$SMP_CLONE" push --quiet origin main
+  add_pool_slot "$SMP_CLONE" "$SMP_POOL" 1
+  slot="$SMP_POOL/1/alpha"
+  foreign_repo="$TMP_ROOT/project-home-pushed/other-home/projects/alpha"
+  fm_git_init_commit "$foreign_repo"
+  add_pool_slot "$foreign_repo" "$TMP_ROOT/project-home-pushed/pool/.treehouse/alpha-1111" 1
+  foreign_slot="$TMP_ROOT/project-home-pushed/pool/.treehouse/alpha-1111/1/alpha"
+  run_project_home_teardown
+  expect_code 0 "$SMP_RC" "fully pushed project work must retire cleanly: $SMP_OUT"
+  [ ! -e "$SMP_SUB" ] || fail "the retirement left the secondmate home behind"
+  [ ! -e "$slot" ] || fail "the retirement left the retired repo's pool slot pointing at a deleted repository"
+  grep -F "treehouse destroy $(cd "$SMP_POOL/1" 2>/dev/null && pwd -P || printf '%s' "$SMP_POOL/1")/alpha" "$SMP_LOG" >/dev/null \
+    || grep -F "treehouse destroy $slot" "$SMP_LOG" >/dev/null \
+    || fail "the retirement did not destroy the retired repo's pool slot through treehouse: $(cat "$SMP_LOG")"
+  [ -d "$foreign_slot" ] || fail "the retirement touched another repo's pool slot"
+  git -C "$foreign_slot" rev-parse --git-dir >/dev/null 2>&1 || fail "another repo's pool slot no longer resolves"
+  pass "secondmate retirement proceeds when project work is on a remote and destroys only the retired repos' pool slots"
+}
+
+test_secondmate_teardown_ignores_upstream_tags_on_no_remote_branch() {
+  local work
+  make_project_home_case upstream-tag
+  work="$TMP_ROOT/project-home-upstream-tag/work"
+  git clone --quiet "$SMP_ORIGIN" "$work"
+  git -C "$work" checkout --quiet -b hotfix
+  smp_commit "$work" hotfix.txt 'Hotfix release'
+  git -C "$work" tag v1.0.1
+  git -C "$work" push --quiet origin hotfix v1.0.1
+  git -C "$work" push --quiet origin --delete hotfix
+  git -C "$SMP_CLONE" fetch --quiet --tags origin
+  git -C "$SMP_CLONE" rev-parse --verify --quiet refs/tags/v1.0.1 >/dev/null \
+    || fail "the fixture home clone did not receive the upstream tag"
+  run_project_home_teardown
+  expect_code 0 "$SMP_RC" "an upstream tag on a commit in no remote branch must not block retirement: $SMP_OUT"
+  [ ! -e "$SMP_SUB" ] || fail "the retirement left the secondmate home behind"
+  pass "secondmate retirement ignores an upstream tag whose commit is on no remote branch"
+}
+
+test_secondmate_force_teardown_discards_unlanded_project_work() {
+  local slot
+  make_project_home_case forced
+  smp_commit "$SMP_CLONE" counter.js 'Add counter page'
+  add_pool_slot "$SMP_CLONE" "$SMP_POOL" 1
+  slot="$SMP_POOL/1/alpha"
+  run_project_home_teardown --force
+  expect_code 0 "$SMP_RC" "--force must still retire a home with unlanded project work: $SMP_OUT"
+  [ ! -e "$SMP_SUB" ] || fail "forced retirement left the secondmate home behind"
+  [ ! -e "$slot" ] || fail "forced retirement left the retired repo's pool slot behind"
+  assert_contains "$(cat "$SMP_LOG")" "--include-unlanded" "forced retirement must authorize the slot discard explicitly"
+  pass "forced secondmate retirement still discards unlanded project work and its pool slots"
+}
+
+test_secondmate_teardown_refuses_when_a_pool_slot_cannot_be_destroyed() {
+  local slot mode
+  for mode in plain --force; do
+    make_project_home_case "leased-slot${mode}"
+    add_pool_slot "$SMP_CLONE" "$SMP_POOL" 1
+    slot="$SMP_POOL/1/alpha"
+    SMP_RC=0
+    SMP_OUT=$(PATH="$SMP_FAKEBIN:$PATH" FM_ROOT_OVERRIDE="$SMP_FMROOT" FM_HOME="$SMP_HOME" FM_FAKE_TMUX_LOG="$SMP_LOG" \
+      FM_FAKE_TMUX_CAPTURE="$(dirname "$SMP_LOG")/pane.txt" FM_FAKE_TREEHOUSE_LEASED="$slot" \
+      "$ROOT/bin/fm-teardown.sh" domain ${mode#plain} 2>&1) || SMP_RC=$?
+    expect_code 1 "$SMP_RC" "$mode: retirement must refuse a pool slot treehouse will not destroy: $SMP_OUT"
+    assert_contains "$SMP_OUT" "REFUSED: treehouse will not destroy pool slot" "$mode: the refusal must say why"
+    assert_contains "$SMP_OUT" "treehouse return --force" "$mode: the refusal must name the release step"
+    assert_not_contains "$(cat "$SMP_LOG")" "kill-window" "$mode: the refusal must come before the mate's endpoint is killed"
+    assert_not_contains "$(cat "$SMP_LOG")" "--yes" "$mode: the refusal must come before any slot is destroyed"
+    [ -d "$slot" ] || fail "$mode: the refused retirement removed the leased pool slot"
+    [ -d "$SMP_CLONE/.git" ] || fail "$mode: the refused retirement removed the home"
+    [ -f "$SMP_HOME/state/domain.meta" ] || fail "$mode: the refused retirement removed the secondmate record"
+    grep -F -- '- domain ' "$SMP_HOME/data/secondmates.md" >/dev/null || fail "$mode: the refused retirement removed the registry route"
+  done
+
+  make_project_home_case destroy-fails
+  add_pool_slot "$SMP_CLONE" "$SMP_POOL" 1
+  slot="$SMP_POOL/1/alpha"
+  SMP_RC=0
+  SMP_OUT=$(PATH="$SMP_FAKEBIN:$PATH" FM_ROOT_OVERRIDE="$SMP_FMROOT" FM_HOME="$SMP_HOME" FM_FAKE_TMUX_LOG="$SMP_LOG" \
+    FM_FAKE_TMUX_CAPTURE="$(dirname "$SMP_LOG")/pane.txt" FM_FAKE_TREEHOUSE_DESTROY_FAIL=1 \
+    "$ROOT/bin/fm-teardown.sh" domain 2>&1) || SMP_RC=$?
+  [ "$SMP_RC" -ne 0 ] || fail "retirement reported success while a pool slot of its repo survived: $SMP_OUT"
+  assert_contains "$SMP_OUT" "$slot" "the failure must name the pool slot"
+  [ -d "$SMP_CLONE/.git" ] || fail "retirement removed the home while one of its pool slots still pointed into it"
+  grep -F -- '- domain ' "$SMP_HOME/data/secondmates.md" >/dev/null || fail "the failed retirement removed the registry route"
+  pass "secondmate retirement refuses before the kill on a slot treehouse would skip, and keeps the home when a destroy still fails"
 }
 
 # A second mate's status log relays child outcomes, so a merged child PR there
@@ -3143,6 +3399,7 @@ test_home_seed_refuses_projectless_home_with_non_directory_projects
 test_home_seed_refuses_projectless_home_with_uninspectable_registry
 test_home_seed_refuses_missing_projects_without_signal
 test_home_seed_refuses_local_only_project
+test_spawn_refuses_local_only_ship_in_secondmate_home
 test_home_seed_refuses_an_unresolvable_registry_posture
 test_home_seed_refuses_registry_delimiter_home
 test_home_seed_refuses_active_home_and_root
@@ -3163,6 +3420,11 @@ test_secondmate_spawn_requires_seeded_matching_home
 test_secondmate_spawn_refuses_operational_dirs_outside_subhome
 test_fm_send_refuses_bare_window_without_home_meta
 test_secondmate_teardown_retires_empty_home
+test_secondmate_teardown_refuses_unlanded_project_work
+test_secondmate_teardown_retires_pushed_project_work_and_its_pool_slots
+test_secondmate_teardown_ignores_upstream_tags_on_no_remote_branch
+test_secondmate_force_teardown_discards_unlanded_project_work
+test_secondmate_teardown_refuses_when_a_pool_slot_cannot_be_destroyed
 test_branch_actor_cannot_retire_secondmate
 test_secondmate_teardown_refuses_ambiguous_and_mismatched_registry_bindings
 test_secondmate_teardown_sweeps_process_events_before_removal

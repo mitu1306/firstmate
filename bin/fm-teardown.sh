@@ -191,7 +191,17 @@
 # captain's active tab, and restore the exact response-derived pre-close tab
 # if Herdr's last-pane cleanup focuses an unrelated neighboring workspace.
 # Secondmates (kind=secondmate in meta) are retired explicitly. Normal
-# teardown refuses while their home has in-flight crewmate meta files; --force
+# teardown refuses while their home has in-flight crewmate meta files, and
+# while any git clone under a LOCAL home's projects/ - or any worktree of one,
+# including an idle pool slot - holds work the landed-work rule above does not
+# find on a remote: uncommitted changes, a local branch or detached HEAD with
+# commits that no remote-tracking branch other than the no-mistakes mirror
+# contains (after refreshing those refs), or a stash. The refusal names each
+# project, branch, commit, slot, and stash entry and changes nothing; it is
+# proved again after the mate's endpoint is killed and before the home is
+# removed. The primary-side remote secondmate route path does not run this
+# check and is unchanged; the remote host's own local teardown of the home it
+# holds applies it there. --force
 # is the approved discard path that prevalidates child removal targets, locks each
 # descendant home's task set before enumeration, and holds those locks through
 # child cleanup. Contention refuses the complete forced teardown before child
@@ -202,15 +212,34 @@
 # secondmate retirement, every parent pending-reply record for that id (resolved
 # leftovers included) and its delivery confirmation is removed so retired mates
 # cannot leave durable reply expectations behind. Non-forced retirement refuses
-# while any of those records is still unresolved. Teardown then discards child
-# work, kills child runtime endpoints, and removes the retired home. Removing a
-# leased home releases its durable treehouse lease so the pool slot is freed,
-# never left leased forever. If the treehouse return fails, teardown leaves the
-# leased home and state in place instead of hiding a still-held lease.
+# while any of those records is still unresolved. On LOCAL retirement of a
+# Devin secondmate (recorded harness family devin), after the mate's runtime
+# endpoint is killed and before its home is removed, the home's own
+# bin/fm-afk-launch.sh stop is run best-effort so the quiet daemon still living
+# in its detached terminal is not leaked. Teardown then discards child
+# work, kills child runtime endpoints, and removes the retired home. Before a
+# home goes, every Treehouse pool slot made from one of its project clones
+# (outside the home, proved by fm_treehouse_pool_slot) is destroyed through
+# `treehouse destroy <slot> --yes`, so no slot is left pointing at a deleted
+# repository; --force adds --include-unlanded --include-in-use, never a lease.
+# Before the mate's endpoint is killed, the same destroy runs as treehouse's
+# dry run (no --yes) over every such slot except the worktrees of the home's
+# own child tasks, which forced child cleanup returns first. That dry run exits
+# 0 even when it skips the named slot, so only its "would destroy 1 worktree"
+# report proves the slot destroyable; any other answer (a skip for a lease,
+# processes, or unlanded work beyond the flags) refuses the retirement there,
+# naming the slot and its treehouse return --force step, and changes nothing.
+# A slot treehouse still will not destroy at removal time stops the retirement
+# with the home intact. Slots of any other repository are never touched.
+# Removing a leased home releases its durable treehouse lease so the pool slot
+# is freed, never left leased forever. If the treehouse return fails, teardown
+# leaves the leased home and state in place instead of hiding a still-held
+# lease.
 # Usage: fm-teardown.sh <task-id> [--force] [--legacy-record]
 #   --force skips ordinary-task dirty and landed-work checks, skips scout report
 #   checks and closes the scout as discarded with no report recorded, and
-#   discards secondmate child work for kind=secondmate. Only use it when the
+#   discards secondmate child work and unlanded project-clone work for
+#   kind=secondmate. Only use it when the
 #   captain has explicitly said to discard the work.
 #   --legacy-record accepts a task record that predates the spawn_gen field:
 #   teardown then proceeds only when the recorded endpoint is confirmed dead or
@@ -1699,7 +1728,7 @@ unpushed_patches_are_in_pr_head() {
       | sort -u
   ) || return 1
   [ -n "$pr_patch_ids" ] || return 1
-  unpushed=$(git -C "$WT" log --format=%H HEAD --not --exclude='no-mistakes/*' --remotes -- 2>/dev/null) || return 1
+  unpushed=$(commits_not_on_remote "$WT" %H HEAD 2>/dev/null) || return 1
   [ -n "$unpushed" ] || return 1
   while IFS= read -r commit; do
     [ -n "$commit" ] || continue
@@ -2141,18 +2170,36 @@ teardown_note_dirty_return() {
 # fetching it would count work as landed that no real remote holds.
 REMOTE_REFS_REFRESHED=0
 REMOTE_REFRESH_FAILED=
-refresh_remote_refs() {
-  local remote
-  [ "$REMOTE_REFS_REFRESHED" = 0 ] || return 0
-  REMOTE_REFS_REFRESHED=1
+fetch_remote_tracking_refs() {  # <dir> [<failure-label-prefix>]
+  local dir=$1 prefix=${2:-} remote
   while IFS= read -r remote; do
     case "$remote" in ''|no-mistakes) continue ;; esac
-    GIT_TERMINAL_PROMPT=0 fm_run_timed 30 git -C "$WT" fetch --quiet --no-prune --no-tags --no-recurse-submodules \
+    GIT_TERMINAL_PROMPT=0 fm_run_timed 30 git -C "$dir" fetch --quiet --no-prune --no-tags --no-recurse-submodules \
       "$remote" "+refs/heads/*:refs/remotes/$remote/*" </dev/null >/dev/null 2>&1 \
-      || REMOTE_REFRESH_FAILED="$REMOTE_REFRESH_FAILED${REMOTE_REFRESH_FAILED:+, }$remote"
+      || REMOTE_REFRESH_FAILED="$REMOTE_REFRESH_FAILED${REMOTE_REFRESH_FAILED:+, }$prefix$remote"
   done <<EOF
-$(git -C "$WT" remote 2>/dev/null)
+$(git -C "$dir" remote 2>/dev/null)
 EOF
+}
+
+refresh_remote_refs() {
+  [ "$REMOTE_REFS_REFRESHED" = 0 ] || return 0
+  REMOTE_REFS_REFRESHED=1
+  fetch_remote_tracking_refs "$WT"
+}
+
+# The one landed-work reachability rule (script header): the commits reachable
+# from <rev>... that no remote-tracking branch other than the local no-mistakes
+# mirror contains, printed in git log <format>.
+commits_not_on_remote() {  # <dir> <format> <rev>...
+  local dir=$1 format=$2
+  shift 2
+  git -C "$dir" log --format="$format" "$@" --not --exclude='no-mistakes/*' --remotes --
+}
+
+# Porcelain status lines minus the per-task wiring files teardown itself owns.
+dirt_without_task_wiring() {  # <porcelain-status>
+  printf '%s\n' "$1" | grep -vE '^\?\? (\.claude/|\.fm-(grok|kimi)-turnend$)' || true
 }
 
 report_remote_refresh_failure() {
@@ -2172,7 +2219,187 @@ read_worktree_dirt() {
     echo "Restore the git index state, or get the captain's explicit OK to discard, then --force." >&2
     return 1
   fi
-  dirty=$(printf '%s\n' "$dirty_raw" | grep -vE '^\?\? (\.claude/|\.fm-(grok|kimi)-turnend$)' || true)
+  dirty=$(dirt_without_task_wiring "$dirty_raw")
+}
+
+# Secondmate retirement landed-work test (script header). A local secondmate
+# home's project clones are the only copy of whatever its workers landed on a
+# local branch and never pushed, so retiring the home must not delete them
+# silently. Appends one report block per project clone with unlanded work to
+# SECONDMATE_HOME_UNLANDED; a clone that cannot be inspected is reported too,
+# because "cannot tell" never counts as landed.
+SECONDMATE_HOME_UNLANDED=
+secondmate_project_clone_unlanded() {  # <clone>
+  local clone=$1 report='' listed line wt='' detached=0 status dirty heads=() detached_heads=() head ref commits count
+  if ! listed=$(git -C "$clone" -c core.quotePath=false worktree list --porcelain 2>/dev/null); then
+    report="  cannot inspect the clone's git worktrees"$'\n'
+  else
+    while IFS= read -r line || [ -n "$line" ]; do
+      case "$line" in
+        'worktree '*) wt=${line#worktree }; detached=0 ;;
+        detached) detached=1 ;;
+        'HEAD '*) head=${line#HEAD } ;;
+        '')
+          [ -z "$wt" ] || [ ! -d "$wt" ] || secondmate_worktree_unlanded "$wt" "${head:-}" "$detached"
+          wt=''; head=''; detached=0
+          ;;
+      esac
+    done <<EOT
+$listed
+
+EOT
+  fi
+  if ! commits=$(commits_not_on_remote "$clone" %h --branches "${heads[@]+"${heads[@]}"}" 2>/dev/null); then
+    report="$report  cannot inspect the clone for commits not on a remote"$'\n'
+  elif [ -n "$commits" ]; then
+    # Tracking refs that do not show the work prove nothing until refreshed.
+    fetch_remote_tracking_refs "$clone" "$(basename "$clone"):"
+    while IFS= read -r ref; do
+      [ -n "$ref" ] || continue
+      if ! commits=$(commits_not_on_remote "$clone" '%h %s' "$ref" 2>/dev/null); then
+        report="$report  cannot inspect $ref for commits not on a remote"$'\n'
+        continue
+      fi
+      [ -n "$commits" ] || continue
+      count=$(printf '%s\n' "$commits" | wc -l | tr -d ' ')
+      report="$report  branch ${ref#refs/heads/}: $count commit(s) not on any remote:"$'\n'
+      report="$report$(printf '%s\n' "$commits" | head -5 | sed 's/^/    /')"$'\n'
+    done <<EOT
+$(git -C "$clone" for-each-ref --format='%(refname)' refs/heads 2>/dev/null)
+EOT
+    for head in "${detached_heads[@]+"${detached_heads[@]}"}"; do
+      commits=$(commits_not_on_remote "$clone" '%h %s' "${head#*$'\t'}" 2>/dev/null) || commits="cannot inspect"
+      [ -n "$commits" ] || continue
+      report="$report  detached HEAD in ${head%%$'\t'*}:"$'\n'"$(printf '%s\n' "$commits" | head -5 | sed 's/^/    /')"$'\n'
+    done
+  fi
+  if ! commits=$(git -C "$clone" stash list --format='%gd %gs' 2>/dev/null); then
+    report="$report  cannot inspect the clone's stash"$'\n'
+  elif [ -n "$commits" ]; then
+    report="$report  stash entries:"$'\n'"$(printf '%s\n' "$commits" | head -5 | sed 's/^/    /')"$'\n'
+  fi
+  [ -n "$report" ] || return 0
+  SECONDMATE_HOME_UNLANDED="${SECONDMATE_HOME_UNLANDED}project $(basename "$clone") ($clone):"$'\n'"$report"
+}
+
+# One worktree of a project clone (its main checkout or a linked pool slot):
+# records its HEAD for the reachability check and reports uncommitted changes.
+# Runs in secondmate_project_clone_unlanded's scope and appends to its report.
+secondmate_worktree_unlanded() {  # <worktree> <head> <detached>
+  local wt=$1 head=$2 wt_detached=$3
+  if ! status=$(git -C "$wt" status --porcelain --untracked-files=all 2>/dev/null); then
+    report="$report  cannot inspect $wt for uncommitted changes"$'\n'
+    return 0
+  fi
+  dirty=$(dirt_without_task_wiring "$status")
+  [ -z "$dirty" ] || report="$report  uncommitted changes in $wt:"$'\n'"$(report_worktree_dirt "$dirty" 2>&1 | sed 's/^/    /')"$'\n'
+  case "$head" in ''|*[!0]*) ;; *) return 0 ;; esac
+  [ -n "$head" ] || return 0
+  heads+=("$head")
+  [ "$wt_detached" = 0 ] || detached_heads+=("$wt"$'\t'"$head")
+}
+
+secondmate_home_unlanded_work_refuse() {  # <home>
+  local home=$1 clone
+  SECONDMATE_HOME_UNLANDED=
+  [ -d "$home/projects" ] || return 0
+  for clone in "$home/projects"/*; do
+    [ -d "$clone" ] && [ ! -L "$clone" ] || continue
+    [ -e "$clone/.git" ] || continue
+    secondmate_project_clone_unlanded "$clone"
+  done
+  [ -n "$SECONDMATE_HOME_UNLANDED" ] || return 0
+  echo "REFUSED: secondmate $ID home $home holds project work that is not on any remote; retiring it would delete that work with the home." >&2
+  printf '%s' "$SECONDMATE_HOME_UNLANDED" >&2
+  report_remote_refresh_failure
+  echo "Push or land that work from the home, or get the captain's explicit OK to discard it, then --force (which deletes it with the home)." >&2
+  return 1
+}
+
+# Every Treehouse pool slot made from a project clone inside <home>, one
+# "<clone><TAB><slot>" line each. Only a linked worktree outside the home that
+# fm_treehouse_pool_slot proves belongs to that clone's own git repository is
+# listed, so another home's slots are never named.
+secondmate_home_pool_slots() {  # <home>
+  local home=$1 clone listed line slot
+  [ -d "$home/projects" ] || return 0
+  for clone in "$home/projects"/*; do
+    [ -d "$clone" ] && [ ! -L "$clone" ] && [ -e "$clone/.git" ] || continue
+    listed=$(git -C "$clone" -c core.quotePath=false worktree list --porcelain 2>/dev/null) || continue
+    while IFS= read -r line; do
+      case "$line" in
+        'worktree '*)
+          slot=${line#worktree }
+          [ -d "$slot" ] || continue
+          slot=$(canonical_existing_dir "$slot") || continue
+          if [ "$slot" = "$home" ] || path_is_ancestor_of "$home" "$slot"; then
+            continue
+          fi
+          fm_treehouse_pool_slot "$clone" "$slot" || continue
+          printf '%s\t%s\n' "$clone" "$slot"
+          ;;
+      esac
+    done <<EOF
+$listed
+EOF
+  done
+}
+
+# A slot that is the recorded worktree of one of <home>'s own child tasks.
+secondmate_home_child_worktree() {  # <home> <canonical-slot>
+  local home=$1 slot=$2 child_meta child_wt
+  for child_meta in "$home/state"/*.meta; do
+    [ -e "$child_meta" ] || continue
+    child_wt=$(meta_value "$child_meta" worktree)
+    [ -n "$child_wt" ] && [ -d "$child_wt" ] || continue
+    [ "$(canonical_existing_dir "$child_wt" 2>/dev/null)" != "$slot" ] || return 0
+  done
+  return 1
+}
+
+# A retired home takes its project repositories with it, so a pool slot made
+# from one would be left pointing at a deleted .git. Destroys each such slot
+# through treehouse before the home goes. A non-forced retirement already
+# refused unlanded work in them, so the safe default destroy applies; --force
+# adds the unlanded and in-use classes it authorizes discarding, never a lease.
+# preflight runs that same destroy as treehouse's dry run before anything
+# destructive, skipping child task worktrees that forced child cleanup returns
+# first. The dry run exits 0 even when it skips the named slot, so it refuses
+# unless treehouse reports it would destroy that one worktree. execute destroys
+# them; any slot treehouse will not destroy stops the retirement with the home
+# intact.
+destroy_secondmate_home_pool_slots() {  # <abs-home> <label> <preflight|execute>
+  local home=$1 label=$2 mode=$3 slots clone slot out flags=()
+  slots=$(secondmate_home_pool_slots "$home")
+  [ -n "$slots" ] || return 0
+  command -v treehouse >/dev/null 2>&1 || {
+    echo "error: treehouse command not found; cannot destroy the pool slots of $label $home" >&2
+    return 1
+  }
+  [ "$mode" = preflight ] || flags+=(--yes)
+  [ "$FORCE" != "--force" ] || flags+=(--include-unlanded --include-in-use)
+  while IFS=$'\t' read -r clone slot; do
+    [ -n "$slot" ] || continue
+    if [ "$mode" = preflight ]; then
+      ! secondmate_home_child_worktree "$home" "$slot" || continue
+      out=$( ( cd "$clone" && treehouse destroy "$slot" "${flags[@]+"${flags[@]}"}" ) 2>&1 ) || true
+      if ! printf '%s\n' "$out" | grep -F 'would destroy 1 worktree' >/dev/null; then
+        [ -z "$out" ] || printf '%s\n' "$out" >&2
+        echo "REFUSED: treehouse will not destroy pool slot $slot of $label $home, so retiring it would leave that slot pointing at a deleted repository; retirement changed nothing." >&2
+        echo "Once nothing uses that slot, release it with (cd $clone && treehouse return --force $slot), then retry." >&2
+        return 1
+      fi
+      continue
+    fi
+    if ! out=$( ( cd "$clone" && treehouse destroy "$slot" "${flags[@]}" ) 2>&1 ) || [ -e "$slot" ]; then
+      [ -z "$out" ] || printf '%s\n' "$out" >&2
+      echo "error: treehouse did not destroy pool slot $slot of $label $home; keeping the home so the slot still resolves" >&2
+      return 1
+    fi
+    echo "destroyed pool slot $slot of retired $label repository $clone" >&2
+  done <<EOF
+$slots
+EOF
 }
 
 validate_worktree_teardown_safety() {
@@ -2185,7 +2412,7 @@ validate_worktree_teardown_safety() {
 
   read_worktree_dirt || return
 
-  if ! unpushed_raw=$(git -C "$WT" log --oneline HEAD --not --exclude='no-mistakes/*' --remotes -- 2>/dev/null); then
+  if ! unpushed_raw=$(commits_not_on_remote "$WT" '%h %s' HEAD 2>/dev/null); then
     if worktree_safety_blocked_by_lock "commits not on a remote"; then
       return "$TEARDOWN_WORKTREE_SAFETY_LOCK_BLOCKED"
     fi
@@ -2199,7 +2426,7 @@ validate_worktree_teardown_safety() {
     # The task's processes are still running, so edits may have arrived during
     # the wait; the refusals below act on this fresh read.
     read_worktree_dirt || return
-    if ! unpushed_raw=$(git -C "$WT" log --oneline HEAD --not --exclude='no-mistakes/*' --remotes -- 2>/dev/null); then
+    if ! unpushed_raw=$(commits_not_on_remote "$WT" '%h %s' HEAD 2>/dev/null); then
       if worktree_safety_blocked_by_lock "commits not on a remote"; then
         return "$TEARDOWN_WORKTREE_SAFETY_LOCK_BLOCKED"
       fi
@@ -2973,6 +3200,10 @@ remove_firstmate_home() {  # <home> <label> <task-id> <backend>
     restore_firstmate_home_process_events "$abs_home_path" "$label" "$process_event_backup" || return $?
     return 1
   fi
+  if ! destroy_secondmate_home_pool_slots "$abs_home_path" "$label" execute; then
+    restore_firstmate_home_process_events "$abs_home_path" "$label" "$process_event_backup" || return $?
+    return 1
+  fi
   # Read-only strip dirs sit at state/<id>.git-hooks, and a remote secondmate's
   # own one under state/parent-route/, so search the whole state tree.
   find "$abs_home_path/state" -type d -name '*.git-hooks' -exec chmod u+w {} + 2>/dev/null || true
@@ -3691,7 +3922,7 @@ if [ "$KIND" = secondmate ]; then
   handoff_wake_retire_stage_recover "$HOME_PATH" || exit 1
   handoff_wake_retire_validate || exit 1
   pending_replies_recovery_validate initial || exit 1
-  validate_firstmate_home_for_removal "$HOME_PATH" "secondmate home" "$ID" >/dev/null || exit 1
+  SM_ABS_HOME=$(validate_firstmate_home_for_removal "$HOME_PATH" "secondmate home" "$ID") || exit 1
   if [ "$FORCE" = "--force" ]; then
     validate_firstmate_home_children_removal "$HOME_PATH" || exit 1
     preflight_descendant_task_locks "$HOME_PATH" || exit 1
@@ -3715,10 +3946,14 @@ if [ "$KIND" = secondmate ] && [ "$FORCE" != "--force" ]; then
     done
   fi
   secondmate_unresolved_pending_replies_refuse || exit 1
+  secondmate_home_unlanded_work_refuse "$HOME_PATH" || exit 1
 fi
 
 if [ "$KIND" = secondmate ]; then
   preflight_firstmate_home_process_event_tree "$HOME_PATH" "secondmate home" || exit 1
+  if [ -n "$SM_ABS_HOME" ]; then
+    destroy_secondmate_home_pool_slots "$SM_ABS_HOME" "secondmate home" preflight || exit 1
+  fi
 fi
 
 if [ "$KIND" = secondmate ] && [ "$FORCE" = "--force" ]; then
@@ -4135,6 +4370,29 @@ if [ "$KIND" = secondmate ]; then
     || { echo "error: receiver wake cleanup could not be staged; preserving the secondmate home and route" >&2; exit 1; }
   pending_replies_recovery_validate recheck \
     || { echo "error: local pending-reply recovery paths changed; preserving the secondmate home and route" >&2; exit 1; }
+  # A Devin secondmate home's quiet daemon lives in a detached tmux session or
+  # Herdr tab of its own: its pane-gone guard only backs off, and the mate's
+  # SessionEnd may never fire when the endpoint is killed, so retiring the mate
+  # without stopping it would leak the daemon. Devin secondmates only, and only
+  # when the home's launcher and a daemon trace exist; the outcome is logged
+  # and never fails the teardown.
+  if [ "$(fm_control_harness_family "$(meta_value "$META" harness)")" = devin ] \
+    && [ -x "$HOME_PATH/bin/fm-afk-launch.sh" ] \
+    && { [ -e "$HOME_PATH/state/.afk-daemon-terminal" ] || [ -e "$HOME_PATH/state/.supervise-daemon.lock" ]; }; then
+    if SM_DAEMON_STOP_OUT=$(env FM_ROOT_OVERRIDE= FM_STATE_OVERRIDE= FM_DATA_OVERRIDE= FM_PROJECTS_OVERRIDE= FM_CONFIG_OVERRIDE= FM_HOME="$HOME_PATH" \
+        "$HOME_PATH/bin/fm-afk-launch.sh" stop 2>&1); then
+      printf '%s\n' "secondmate daemon stopped for $ID: $SM_DAEMON_STOP_OUT" >&2
+    else
+      printf '%s\n' "warning: secondmate daemon stop for $ID reported: $SM_DAEMON_STOP_OUT" >&2
+    fi
+  fi
+  # The endpoint is gone now, so nothing can land in the home between this
+  # final landed-work proof and its removal.
+  if [ "$FORCE" != "--force" ] && ! secondmate_home_unlanded_work_refuse "$HOME_PATH"; then
+    handoff_wake_retire_stage_restore \
+      || echo "error: receiver wake restoration failed; recovery state remains at $HANDOFF_WAKE_RETIRE_STAGE" >&2
+    exit 1
+  fi
   if remove_firstmate_home "$HOME_PATH" "secondmate home" "$ID" "$BACKEND"; then
     :
   else

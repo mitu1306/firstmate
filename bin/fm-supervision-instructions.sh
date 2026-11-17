@@ -203,7 +203,7 @@ repair_line() {
     return 0
   fi
   if [ "$HARNESS" = devin ]; then
-    printf '%s\n' 'the quiet daemon owns supervision on a Devin primary; run bin/fm-devin-primary.sh ensure to restart it, and tell the captain plainly if that fails; never run fm-watch.sh or fm-watch-arm.sh yourself.'
+    printf '%s\n' 'the quiet daemon owns supervision on a Devin firstmate session, primary or secondmate; run bin/fm-devin-primary.sh ensure to restart it, and tell the captain plainly if that fails; never run fm-watch.sh or fm-watch-arm.sh yourself.'
     return 0
   fi
   if [ "$AFK" -eq 1 ]; then

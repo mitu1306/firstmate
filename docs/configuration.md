@@ -1296,10 +1296,12 @@ A preexisting project-bearing charter is also refused until it is re-scaffolded 
 
 The lease is held under the secondmate id until explicit retirement or seed rollback returns it, so normal restarts do not free or recycle the home.
 Teardown of a leased home fails closed if `treehouse return` cannot release the lease; plain-clone homes with no treehouse pool slot are removed directly.
+Non-forced retirement of a local home refuses while any of its project clones, or a pool slot made from one, holds work no remote has, and it destroys those clones' pool slots before removing the home; the [`bin/fm-teardown.sh`](../bin/fm-teardown.sh) header owns both.
 
 ### Project modes and backlog handoff
 
 Secondmate routes cover `no-mistakes` and `direct-PR` projects; `local-only` projects remain main-firstmate work.
+Seeding refuses a `local-only` project, and `fm-spawn.sh` refuses a `--mode local-only` ship inside a secondmate home, because that home's local main is deleted with it at retirement.
 For `no-mistakes` projects, seeding initializes only projects newly cloned into a secondmate home and refuses to mutate a preexisting clone that is not already initialized.
 
 After creating a secondmate, move existing main-backlog queued items that you have judged in-scope with `fm-backlog-handoff.sh <secondmate-id> <item-key>...`; it refuses In flight, Done, or non-secondmate homes, and its [script header](../bin/fm-backlog-handoff.sh) owns route-specific wake outcomes and retries.
@@ -1340,7 +1342,7 @@ An agy secondmate or primary runs the tracked project-scope `.agents/hooks.json`
 kiro (Kiro CLI, V2 engine only) is likewise verified for crewmate and scout launches ONLY, refused for a secondmate because it has no primary supervision protocol; it is claude-shaped, so its per-task turn-end and busy hooks live in a firstmate-owned agent config the spawn writes under `state/<id>.kiro-home` and reaches by relocating `KIRO_HOME` (never the worktree's own `.kiro/`), with the `--trust-all-tools` modal suppressed by a seeded `chat.disableTrustAllConfirmation` setting; [`docs/verification/kiro.md`](verification/kiro.md) owns that evidence, and the v3/KAS engine is out of scope and unsupported on Amazon Linux 2.
 A kiro hook command must be one unquoted token, so a kiro spawn refuses before launch when that per-task home path contains whitespace or a shell-special character (such as a quote or `$`) and asks for an `FM_HOME` or `FM_STATE_OVERRIDE` free of them.
 
-devin is verified for crewmate and scout launches, and as a primary only under the quiet daemon (see [Devin primary](#devin-primary)); a secondmate is still refused.
+devin is verified for crewmate and scout launches, and as a primary or secondmate only under the quiet daemon (see [Devin primary](#devin-primary) and [Devin secondmate](#devin-secondmate)).
 
 Its private worker config disables Claude Code imports (including the captain's hooks) and, unless the home sets `config/keep-ai-trailers` (see "Commit attribution"), Devin commit attribution without editing user or project config; [`fm-devin-config.sh`](../bin/fm-devin-config.sh) owns these enforced settings and [Devin verification](verification/devin.md) owns the live evidence and observed model availability.
 
@@ -1402,6 +1404,23 @@ It registers four hooks:
 `read_config_from.claude` is `false` so Devin does not import the repo's Claude Code hooks, which would run Claude's own supervision on a Devin session.
 `attribution` is `false` so Devin adds no `Co-Authored-By` trailer or `Generated with Devin` line to commits; drop it if the home keeps AI trailers (see [Commit attribution](#commit-attribution)).
 [`docs/supervision-protocols/devin.md`](supervision-protocols/devin.md) owns the primary's operating rules.
+
+### Devin secondmate
+
+A Devin secondmate runs the same quiet-daemon supervision as a Devin primary, inside the secondmate's own isolated home, launched by `bin/fm-spawn.sh <id> <parent-home> --harness devin --secondmate`.
+Only the tmux and Herdr backends are supported; another backend is refused before any provisioning, as is a raw launch command, because its hooks would never be installed.
+A secondmate home whose own `bin/fm-devin-primary.sh` still lacks `.fm-busy-stop` pointer support after the pre-launch sync is also refused and must be synced to current firstmate code first.
+
+Unlike the primary there is no captain-authored config: `fm-spawn.sh` generates one per launch at the parent's `state/<id>.devin-config.json` from the user's `~/.config/devin/config.json` through `bin/fm-devin-config.sh --secondmate`, which still forces `read_config_from.claude` and `attribution` to `false` and keeps the user's own hooks and settings.
+The generated `SessionStart`, `Stop`, and `SessionEnd` hooks run the secondmate home's own `bin/fm-devin-primary.sh`, and the same `PreToolUse` `^ask_user_question$` block is added.
+The busy-state `UserPromptSubmit` hook and an extra `SessionEnd` hook run the parent's `bin/fm-busy-event.sh` against the parent's busy record.
+The `Stop` hook carries no busy idle hook; its verdict instead reaches the parent busy record through the home's `.fm-busy-stop` pointer, which `fm-spawn.sh` writes and git-excludes.
+
+The first prompt is the typed launch brief, and both it and the `SessionStart` `additionalContext` ask for `bin/fm-session-start.sh` once.
+The daemon's supervised pane is the secondmate's own pane.
+The parent's `fm-send` steers type into that same pane, and both the daemon's wakes and those steers are gated by the composer-draft check.
+Lock refusal, `Stop` self-heal, and the bounded block cap are the same as the primary.
+A relaunch after a dead pane replaces the recorded daemon via `--replace-mismatched`, and teardown of a Devin secondmate stops the home's daemon before removing the home.
 
 ### Choose the worker harness
 
